@@ -5,6 +5,7 @@
 #ifndef KERNEL_SYS_PARAM_H
 #define KERNEL_SYS_PARAM_H
 
-#include <kernel/sys/param_amd64.h>
+// Page size on the amd64 architecture.
+#define ARCH_MM_PAGE_SIZE 4096UL
 
 #endif // KERNEL_SYS_PARAM_H
