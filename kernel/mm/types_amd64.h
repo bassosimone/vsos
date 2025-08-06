@@ -20,10 +20,4 @@ typedef uintptr_t arch_mm_virt_addr_t;
 // Integer type containing the page mapping flags.
 typedef uint32_t arch_mm_flags_t;
 
-// Assume that the addresses are aligned and create a mapping between physical and virtual.
-void arch_mm_virt_page_map_assume_aligned(arch_mm_phys_addr_t table,
-					  arch_mm_phys_addr_t paddr,
-					  arch_mm_virt_addr_t vaddr,
-					  arch_mm_flags_t flags);
-
 #endif // KERNEL_MM_TYPES_AMD64_H
