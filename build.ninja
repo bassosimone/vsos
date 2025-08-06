@@ -1,0 +1,34 @@
+# File: build.ninja
+# SPDX-License-Identifier: MIT
+# Purpose: Build the kernel
+
+rule cc
+  command = clang -I. -O2 -std=c23 -target aarch64-none-elf -ffreestanding -nostdlib -Wall -Wextra -c $in -o $out
+  description = CC $out
+
+rule link
+  command = ld.lld -T kernel/boot/layout_arm64.ld -nostdlib $in -o $out
+  description = LD $out
+
+rule objcopy
+  command = llvm-objcopy -O binary $in $out
+  description = OBJCOPY $out
+
+build kernel/boot/boot.o: cc kernel/boot/boot.c
+build kernel/core/panic.o: cc kernel/core/panic.c
+
+build kernel/core/printk.o: cc kernel/core/printk.c
+build kernel/core/panic_arm64.o: cc kernel/core/panic_arm64.c
+
+build kernel/mm/vmap_arm64.o: cc kernel/mm/vmap_arm64.c
+build kernel/mm/vmap.o: cc kernel/mm/vmap.c
+build kernel/mm/palloc.o: cc kernel/mm/palloc.c
+
+build kernel/tty/uart_arm64.o: cc kernel/tty/uart_arm64.c
+
+build libc/string/memset.o: cc libc/string/memset.c
+build libc/string/strncmp.o: cc libc/string/strncmp.c
+
+build kernel.elf: link kernel/boot/boot.o kernel/core/panic.o kernel/core/printk.o kernel/core/panic_arm64.o kernel/mm/vmap_arm64.o kernel/mm/vmap.o kernel/mm/palloc.o kernel/tty/uart_arm64.o libc/string/memset.o libc/string/strncmp.o
+
+build kernel.bin: objcopy kernel.elf

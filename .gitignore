@@ -1,0 +1,4 @@
+/kernel.bin
+/kernel.elf
+/.ninja_log
+*.o
