@@ -11,4 +11,5 @@
 	__builtin_va_start(ap, fmt);
 	vprintk(fmt, ap);
 	__builtin_va_end(ap);
+	__panic_halt();
 }
