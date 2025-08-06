@@ -6,6 +6,7 @@
 #include <kernel/core/assert.h> // for KERNEL_ASSERT
 #include <kernel/mm/palloc.h>	// for mm_phys_page_alloc_many
 #include <kernel/mm/vmap.h>	// for arch_mm_phys_addr_t, etc.
+#include <libc/string/string.h> // for memset
 
 // We're using identity mapping in this kernel
 static inline void *__phys_to_virt(uint64_t paddr) { return (void *)paddr; }
@@ -56,7 +57,7 @@ void __mm_virt_page_map_assume_aligned(mm_phys_addr_t table,
 
 	if ((pml4[pml4_idx] & AMD64_FLAG_PRESENT) == 0) {
 		mm_phys_addr_t pdpt_phys = mm_phys_page_alloc_many(1);
-		__builtin_memset(__phys_to_virt(pdpt_phys), 0, MM_PAGE_SIZE);
+		memset(__phys_to_virt(pdpt_phys), 0, MM_PAGE_SIZE);
 		pml4[pml4_idx] = pdpt_phys | intermediate_flags;
 	}
 
@@ -65,7 +66,7 @@ void __mm_virt_page_map_assume_aligned(mm_phys_addr_t table,
 
 	if ((pdpt[pdpt_idx] & AMD64_FLAG_PRESENT) == 0) {
 		mm_phys_addr_t pd_phys = mm_phys_page_alloc_many(1);
-		__builtin_memset(__phys_to_virt(pd_phys), 0, MM_PAGE_SIZE);
+		memset(__phys_to_virt(pd_phys), 0, MM_PAGE_SIZE);
 		pdpt[pdpt_idx] = pd_phys | intermediate_flags;
 	}
 
@@ -74,7 +75,7 @@ void __mm_virt_page_map_assume_aligned(mm_phys_addr_t table,
 
 	if ((pd[pd_idx] & AMD64_FLAG_PRESENT) == 0) {
 		mm_phys_addr_t pt_phys = mm_phys_page_alloc_many(1);
-		__builtin_memset(__phys_to_virt(pt_phys), 0, MM_PAGE_SIZE);
+		memset(__phys_to_virt(pt_phys), 0, MM_PAGE_SIZE);
 		pd[pd_idx] = pt_phys | intermediate_flags;
 	}
 

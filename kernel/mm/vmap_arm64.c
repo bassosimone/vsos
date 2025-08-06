@@ -7,6 +7,7 @@
 #include <kernel/core/assert.h> // KERNEL_ASSERT
 #include <kernel/mm/palloc.h>	// mm_phys_page_alloc_many
 #include <kernel/mm/vmap.h>	// arch_mm_virt_addr_t, etc.
+#include <libc/string/string.h> // for memset
 
 // We're using identity mapping in this kernel
 static inline void *__phys_to_virt(uint64_t paddr) { return (void *)paddr; }
@@ -90,7 +91,7 @@ void __mm_virt_page_map_assume_aligned(mm_phys_addr_t table,
 	uint64_t *l1 = (uint64_t *)__phys_to_virt(table);
 	if ((l1[l1_idx] & ARM64_PTE_VALID) == 0) {
 		mm_phys_addr_t l2_phys = mm_phys_page_alloc_many(1);
-		__builtin_memset(__phys_to_virt(l2_phys), 0, MM_PAGE_SIZE);
+		memset(__phys_to_virt(l2_phys), 0, MM_PAGE_SIZE);
 		l1[l1_idx] = arm64_make_table_desc(l2_phys);
 		dsb_sy(); // ensure table write is visible
 	}
@@ -99,7 +100,7 @@ void __mm_virt_page_map_assume_aligned(mm_phys_addr_t table,
 	uint64_t *l2 = (uint64_t *)__phys_to_virt(l1[l1_idx] & ARM64_PTE_ADDR_MASK);
 	if ((l2[l2_idx] & ARM64_PTE_VALID) == 0) {
 		mm_phys_addr_t l3_phys = mm_phys_page_alloc_many(1);
-		__builtin_memset(__phys_to_virt(l3_phys), 0, MM_PAGE_SIZE);
+		memset(__phys_to_virt(l3_phys), 0, MM_PAGE_SIZE);
 		l2[l2_idx] = arm64_make_table_desc(l3_phys);
 		dsb_sy(); // ensure table write is visible
 	}

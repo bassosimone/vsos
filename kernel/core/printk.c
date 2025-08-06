@@ -5,6 +5,7 @@
 
 #include <kernel/core/printk.h>
 #include <kernel/tty/uart.h>
+#include <libc/string/string.h>
 
 // Note: this code cannot invoke `KERNEL_ASSERT` since it is called by `panic`.
 
@@ -131,21 +132,21 @@ void vprintk(const char *fmt, __builtin_va_list ap) {
 		// 6. two-characters format string
 
 		// 6.1. handle the case of '%ld'
-		if (__builtin_strncmp(fmt, "ld", 2) == 0) {
+		if (strncmp(fmt, "ld", 2) == 0) {
 			_decimal(__builtin_va_arg(ap, long));
 			fmt = fmt + 2;
 			continue;
 		}
 
 		// 6.2. handle the case of '%lu'
-		if (__builtin_strncmp(fmt, "lu", 2) == 0) {
+		if (strncmp(fmt, "lu", 2) == 0) {
 			_udecimal(__builtin_va_arg(ap, unsigned long));
 			fmt = fmt + 2;
 			continue;
 		}
 
 		// 6.3. handle the case of '%lx'
-		if (__builtin_strncmp(fmt, "lx", 2) == 0) {
+		if (strncmp(fmt, "lx", 2) == 0) {
 			_uhex(__builtin_va_arg(ap, unsigned long));
 			fmt = fmt + 2;
 			continue;
@@ -154,21 +155,21 @@ void vprintk(const char *fmt, __builtin_va_list ap) {
 		// 7. three-characters format string
 
 		// 7.1. handle the case of '%lld'
-		if (__builtin_strncmp(fmt, "lld", 3) == 0) {
+		if (strncmp(fmt, "lld", 3) == 0) {
 			_decimal(__builtin_va_arg(ap, long long));
 			fmt = fmt + 3;
 			continue;
 		}
 
 		// 7.2. handle the case of '%llu'
-		if (__builtin_strncmp(fmt, "llu", 3) == 0) {
+		if (strncmp(fmt, "llu", 3) == 0) {
 			_udecimal(__builtin_va_arg(ap, unsigned long long));
 			fmt = fmt + 3;
 			continue;
 		}
 
 		// 7.3. handle the case of '%llx'
-		if (__builtin_strncmp(fmt, "llx", 3) == 0) {
+		if (strncmp(fmt, "llx", 3) == 0) {
 			_uhex(__builtin_va_arg(ap, unsigned long long));
 			fmt = fmt + 3;
 			continue;
