@@ -3,18 +3,12 @@
 // SPDX-License-Identifier: MIT
 // Adapted from: https://github.com/nuta/operating-system-in-1000-lines
 
+#include <kernel/boot/layout.h> // for __free_ram, __free_ram_end
 #include <kernel/core/assert.h> // for KERNEL_ASSERT
-
-#include <kernel/mm/palloc.h> // for arch_mm_phys_addr_t, etc.
-
-// Linker-defined location where the free RAM starts.
-extern char __mm_free_ram_start[];
-
-// Linker-defined location where the free RAM ends.
-extern char __mm_free_ram_end[];
+#include <kernel/mm/palloc.h>	// for arch_mm_phys_addr_t, etc.
 
 // Location where the bump allocator is allocating memory.
-static arch_mm_phys_addr_t next_paddr = (arch_mm_phys_addr_t)__mm_free_ram_start;
+static arch_mm_phys_addr_t next_paddr = (arch_mm_phys_addr_t)__free_ram;
 
 arch_mm_phys_addr_t mm_phys_page_alloc_many(size_t n) {
 	// 1. make sure the passed size is greater than zero.
