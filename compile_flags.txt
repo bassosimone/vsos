@@ -1,3 +1,5 @@
+-ffreestanding
+-nostdinc
 -I.
 -std=c23
 -Wall
