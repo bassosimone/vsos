@@ -6,6 +6,6 @@
 #define KERNEL_SYS_PARAM_H
 
 // Page size on the amd64 architecture.
-#define ARCH_MM_PAGE_SIZE 4096UL
+#define MM_PAGE_SIZE 4096UL
 
 #endif // KERNEL_SYS_PARAM_H

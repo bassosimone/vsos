@@ -5,14 +5,14 @@
 #ifndef KERNEL_MM_PALLOC_H
 #define KERNEL_MM_PALLOC_H
 
-#include <kernel/sys/param.h> // for ARCH_MM_PAGE_SIZE
+#include <kernel/sys/param.h> // for MM_PAGE_SIZE
 #include <kernel/sys/types.h> // for size_t
 
-#include <kernel/mm/types.h> // for arch_mm_phys_addr_t, etc.
+#include <kernel/mm/types.h> // for mm_phys_addr_t, etc.
 
 // Allocates `n` contiguous physical pages and returns the first page address.
 //
 // Panics in case of failure or if `n` is zero.
-arch_mm_phys_addr_t mm_phys_page_alloc_many(size_t n);
+mm_phys_addr_t mm_phys_page_alloc_many(size_t n);
 
 #endif // KERNEL_MM_PALLOC_H
