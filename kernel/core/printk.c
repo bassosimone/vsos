@@ -80,6 +80,7 @@ void vprintk(const char *fmt, __builtin_va_list ap) {
 		// 2. if the character is not `%` just copy it in output
 		if (*fmt != '%') {
 			_putchar(*fmt);
+			fmt++;
 			continue;
 		}
 
