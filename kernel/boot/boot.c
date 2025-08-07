@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 // Adapted from: https://github.com/nuta/operating-system-in-1000-lines
 
+#include <kernel/asm/arm64.h>	// for enable_fp_simd
 #include <kernel/boot/layout.h> // for __stack_top, __bss, __bss_end
 #include <kernel/core/panic.h>	// for panic
 #include <kernel/core/printk.h> // for printk
@@ -11,6 +12,9 @@
 #include <libc/string/string.h> // for memset
 
 void __kernel_main(void) {
+	// 0. enable FP/SIMD to avoid trapping on SIMD instructions
+	enable_fp_simd();
+
 	// 1. zero the BSS section
 	memset(__bss, 0, (size_t)(__bss_end - __bss));
 
