@@ -8,4 +8,7 @@
 // Page size on the amd64 architecture.
 #define MM_PAGE_SIZE 4096UL
 
+// Maximum number of runnable threads.
+#define SCHED_MAX_THREADS 32
+
 #endif // KERNEL_SYS_PARAM_H

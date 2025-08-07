@@ -3,13 +3,34 @@
 // SPDX-License-Identifier: MIT
 // Adapted from: https://github.com/nuta/operating-system-in-1000-lines
 
-#include <kernel/asm/arm64.h>	// for enable_fp_simd
-#include <kernel/boot/layout.h> // for __stack_top, __bss, __bss_end
-#include <kernel/core/panic.h>	// for panic
-#include <kernel/core/printk.h> // for printk
-#include <kernel/sys/types.h>	// for size_t
-#include <kernel/tty/uart.h>	// for uart_init
-#include <libc/string/string.h> // for memset
+#include <kernel/asm/arm64.h>	 // for enable_fp_simd
+#include <kernel/boot/layout.h>	 // for __stack_top, __bss, __bss_end
+#include <kernel/core/panic.h>	 // for panic
+#include <kernel/core/printk.h>	 // for printk
+#include <kernel/sched/thread.h> // for sched_thread
+#include <kernel/sys/types.h>	 // for size_t
+#include <kernel/tty/uart.h>	 // for uart_init
+#include <libc/string/string.h>	 // for memset
+
+static void thread_hello(void *opaque) {
+	(void)opaque;
+	printk("Hello, world\n");
+	sched_thread_yield();
+	printk("Hello, world\n");
+	sched_thread_yield();
+	printk("Hello, world\n");
+	sched_thread_yield();
+}
+
+static void thread_goodbye(void *opaque) {
+	(void)opaque;
+	printk("Goodbye, world\n");
+	sched_thread_yield();
+	printk("Goodbye, world\n");
+	sched_thread_yield();
+	printk("Goodbye, world\n");
+	sched_thread_yield();
+}
 
 void __kernel_main(void) {
 	// 0. enable FP/SIMD to avoid trapping on SIMD instructions
@@ -20,10 +41,18 @@ void __kernel_main(void) {
 
 	// 2. initialize the serial console
 	uart_init();
+	printk("initialized uart\n");
 
-	// 3. for now just greet the user and die
-	printk("Hello, world!\n");
-	panic("Reached end of __kernel_main");
+	// 3. create a thread for saying hello to the world
+	int64_t tid = sched_thread_start(thread_hello, /* opaque */ 0, /* flags */ 0);
+	printk("started hello thread: %d\n", tid);
+
+	// 4. create a thread for saying goodbye to the world
+	tid = sched_thread_start(thread_goodbye, /* opaque */ 0, /* flags */ 0);
+	printk("started goodbye thread: %d\n", tid);
+
+	// 5. run the thread scheduler
+	sched_thread_yield();
 }
 
 // This is the main assembly entry point of the kernel
