@@ -11,3 +11,21 @@ On Ubuntu 25.04, we need these dependencies to compile the kernel:
 ``` bash
 sudo apt install build-essential clang clangd lld llvm
 ```
+
+## Building
+
+``` bash
+ninja
+```
+
+## Testing
+
+``` bash
+qemu-system-aarch64 \                                                                main!?
+  -M virt \
+  -cpu cortex-a53 \
+  -nographic \
+  -kernel kernel.elf
+```
+
+Add `-d in_asm,cpu,int,guest_errors -D qemu.log` to investigate errors.
