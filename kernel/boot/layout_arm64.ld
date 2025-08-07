@@ -41,6 +41,7 @@ SECTIONS {
     /* Stack space: 128 KiB for kernel stack
        __stack_top marks the "top" (lowest address grows downward) */
     . = ALIGN(16);
+    __stack_bottom = .;
     . += 128 * 1024;
     __stack_top = .;
 
