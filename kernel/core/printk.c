@@ -21,7 +21,9 @@ static inline int16_t uart_putchar(uint8_t ch) {
 }
 
 // Internal helper to print a single character
-static inline void _putchar(char ch) { (void)uart_putchar(ch); }
+static inline void _putchar(char ch) {
+	(void)uart_putchar(ch);
+}
 
 static void _string(const char *s) {
 	while (*s != '\0') {
@@ -60,6 +62,9 @@ static void _uhex(uint64_t value) {
 		if (should_print) {
 			_putchar("0123456789abcdef"[nibble]);
 		}
+	}
+	if (!should_print) {
+		_putchar('0');
 	}
 }
 
