@@ -2,3 +2,4 @@
 /kernel.elf
 /.ninja_log
 *.o
+/qemu.log
