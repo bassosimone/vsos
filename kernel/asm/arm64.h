@@ -88,4 +88,27 @@ static inline void dmb_sy(void) {
 	__asm__ volatile("dmb sy" ::: "memory");
 }
 
+// Disable IRQ interrupts by setting the I-bit in PSTATE.DAIF.
+//
+// DAIF = Debug mask (bit 9), SError mask (bit 8), IRQ mask (bit 7), FIQ mask (bit 6).
+//
+// The `msr daifset, #imm` instruction sets (masks) whichever bits are 1 in `imm`:
+//
+//   #8 → D-bit, #4 → A-bit, #2 → I-bit, #1 → F-bit.
+//
+// Therefore, `#2` masks IRQ only, leaving FIQ, SError, Debug unchanged.
+static inline void msr_daifset_2(void) {
+	__asm__ volatile("msr daifset, #2" ::: "memory");
+}
+
+// Enable IRQ interrupts by clearing the I-bit in PSTATE.DAIF.
+//
+// DAIF bit mapping: D=8, A=4, I=2, F=1. (#2 → IRQ mask bit).
+//
+// This is the inverse of msr_daifset_2(): it unmasks IRQ only,
+// leaving FIQ, SError, and Debug mask bits unchanged.
+static inline void msr_daifclr_2(void) {
+	__asm__ volatile("msr daifclr, #2" ::: "memory");
+}
+
 #endif // KERNEL_ASM_ARM64

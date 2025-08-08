@@ -7,6 +7,8 @@
     .type __sched_switch, %function
 
     // void __sched_switch(struct sched_thread *x0, struct sched_thread *x1)
+    //
+    // This function assumes to be called with interrupts disabled.
 __sched_switch:
     // TODO(bassosimone): when we start using the timer to
     // switch process, we'll additionally need to disable

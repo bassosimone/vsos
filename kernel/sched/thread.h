@@ -63,8 +63,18 @@ int64_t sched_thread_start(sched_thread_main_t *main, void *opaque, uint64_t fla
 
 // Yields the CPU to another runnable thread.
 //
+// This function disables interrupts until the switching is complete
+// so that the clock interrupt does not race with it.
+//
 // Returns when this thread becomes runnable again.
 void sched_thread_yield(void);
+
+// Internal implementation of yielding with interrupts being disabled.
+//
+// Do not call this outside of this module. The sched_thread_yield
+// implementation is MD and disables interrupts before deferring to
+// this function, which is MI, and does the context switch.
+void __sched_thread_yield_without_interrupts(void);
 
 // Terminates the thread execution and sets the return value.
 //

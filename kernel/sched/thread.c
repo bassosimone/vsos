@@ -130,7 +130,7 @@ static void __unlock_and_switch_to(struct sched_thread *next) {
 	panic("unreachable");
 }
 
-void sched_thread_yield(void) {
+void __sched_thread_yield_without_interrupts(void) {
 	// 1. Acquire the spinlock to prevent anyone else with messing with threads.
 	spinlock_acquire(&lock);
 

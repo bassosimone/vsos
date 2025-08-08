@@ -63,3 +63,14 @@ void __sched_thread_stack_init(struct sched_thread *thread) {
 void __sched_idle(void) {
 	wfi();
 }
+
+void sched_thread_yield(void) {
+	// Disable interrupts while switching
+	msr_daifset_2();
+
+	// Perform the actual switch
+	__sched_thread_yield_without_interrupts();
+
+	// Re-enable interrupts when done
+	msr_daifclr_2();
+}
