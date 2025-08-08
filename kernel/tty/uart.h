@@ -26,4 +26,10 @@ int16_t uart_try_write(uint8_t ch);
 // Returns true when the device is writable.
 bool uart_writable(void);
 
+// The read system call using the UART.
+ssize_t uart_read(char *buffer, size_t siz);
+
+// The write system call using the UART.
+ssize_t uart_write(const char *buffer, size_t siz);
+
 #endif // KERNEL_TTY_UART_H
