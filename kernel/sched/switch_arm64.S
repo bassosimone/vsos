@@ -6,7 +6,7 @@
     .global __sched_switch
     .type __sched_switch, %function
 
-    // void __sched_switch(struct sched_thread *x0, struct sched_thread *x1)
+    // void __sched_switch(struct sched_thread *x0, struct sched_thread *x1);
     //
     // This function assumes to be called with interrupts disabled.
 __sched_switch:
@@ -15,69 +15,31 @@ __sched_switch:
 
     // Step 1: save current thread state to prev->sp.
     //
-    // 1.1. save GPRs (x19–x30) individually.
-    sub sp, sp, #8
-    str x19, [sp]
+    // 1.1. reserve the required stack space
+    sub sp, sp, #240  // Note: keep in sync with __sched_build_switch_frame
 
-    sub sp, sp, #8
-    str x20, [sp]
+    // 1.2. save GPRs (x19–x30) individually, 8 bytes each
+    stp x19, x20, [sp, #0]
+    stp x21, x22, [sp, #16]
+    stp x23, x24, [sp, #32]
+    stp x25, x26, [sp, #48]
+    stp x27, x28, [sp, #64]
+    stp x29, x30, [sp, #80] // Note: keep in sync with __sched_build_switch_frame
 
-    sub sp, sp, #8
-    str x21, [sp]
+    // 1.3. save SIMD registers (q8–q15), 16 bytes each
+    stp q8, q9, [sp, #96]
+    stp q10, q11, [sp, #128]
+    stp q12, q13, [sp, #160]
+    stp q14, q15, [sp, #192]
 
-    sub sp, sp, #8
-    str x22, [sp]
+    // 1.4. save floating point control/status registers
+    //
+    // They are 4 bytes each but we save 8 bytes for alignment
+    mrs x19, fpcr
+    mrs x20, fpsr
+    stp x19, x20, [sp, #224]
 
-    sub sp, sp, #8
-    str x23, [sp]
-
-    sub sp, sp, #8
-    str x24, [sp]
-
-    sub sp, sp, #8
-    str x25, [sp]
-
-    sub sp, sp, #8
-    str x26, [sp]
-
-    sub sp, sp, #8
-    str x27, [sp]
-
-    sub sp, sp, #8
-    str x28, [sp]
-
-    sub sp, sp, #8
-    str x29, [sp]
-
-    sub sp, sp, #8
-    str x30, [sp]
-
-    // 1.2. save SIMD registers (q8–q15), 16 bytes each
-    sub sp, sp, #16
-    str q8,  [sp]
-
-    sub sp, sp, #16
-    str q9,  [sp]
-
-    sub sp, sp, #16
-    str q10, [sp]
-
-    sub sp, sp, #16
-    str q11, [sp]
-
-    sub sp, sp, #16
-    str q12, [sp]
-
-    sub sp, sp, #16
-    str q13, [sp]
-
-    sub sp, sp, #16
-    str q14, [sp]
-
-    sub sp, sp, #16
-    str q15, [sp]
-
-    // 1.3. save updated SP into prev->sp.
+    // 1.5. save updated SP into prev->sp.
     //
     // Assumptions:
     //
@@ -100,67 +62,51 @@ __sched_switch:
     ldr x2, [x1]
     mov sp, x2
 
-    // 2.2. Restore SIMD q8–q15
-    ldr q15, [sp]
-    add sp, sp, #16
+    // 2.2. restore floating point control/status registers
+    ldp x19, x20, [sp, #224]
+    msr fpcr, x19
+    msr fpsr, x20
 
-    ldr q14, [sp]
-    add sp, sp, #16
+    // 2.3. Restore SIMD registers (q8–q15)
+    ldp q14, q15, [sp, #192]
+    ldp q12, q13, [sp, #160]
+    ldp q10, q11, [sp, #128]
+    ldp q8, q9, [sp, #96]
 
-    ldr q13, [sp]
-    add sp, sp, #16
+    // 2.4. restore GPRs (x19-x30)
+    ldp x29, x30, [sp, #80]
+    ldp x27, x28, [sp, #64]
+    ldp x25, x26, [sp, #48]
+    ldp x23, x24, [sp, #32]
+    ldp x21, x22, [sp, #16]
+    ldp x19, x20, [sp, #0]
 
-    ldr q12, [sp]
-    add sp, sp, #16
+    // 2.5. unwind the stack
+    add sp, sp, #240
 
-    ldr q11, [sp]
-    add sp, sp, #16
+    // 3. return to restored x30
+    ret
 
-    ldr q10, [sp]
-    add sp, sp, #16
+    // uintptr_t __sched_build_switch_frame(uintptr_t sp);
+    //
+    // Builds the switch frame pointing to the trampoline
+    // and returns the modified stack pointer.
+    //
+    // Assumes that the stack has been zeroed before
+    // invoking this function.
+    .global __sched_build_switch_frame
+    .type   __sched_build_switch_frame, %function
+    .extern __sched_trampoline
 
-    ldr q9,  [sp]
-    add sp, sp, #16
+__sched_build_switch_frame:
+    // Reserve switch frame
+    sub x0, x0, #240  // Note: keep in sync with __sched_switch
 
-    ldr q8,  [sp]
-    add sp, sp, #16
+    // Set the trampoline correctly
+    mov x9, #0
+    adrp x10, __sched_trampoline
+    add x10, x10, :lo12:__sched_trampoline
+    stp x9, x10, [x0, #80]  // Note: keep in sync with __sched_switch
 
-    // 2.3. Restore GPRs (x30 down to x19)
-    ldr x30, [sp]
-    add sp, sp, #8
-
-    ldr x29, [sp]
-    add sp, sp, #8
-
-    ldr x28, [sp]
-    add sp, sp, #8
-
-    ldr x27, [sp]
-    add sp, sp, #8
-
-    ldr x26, [sp]
-    add sp, sp, #8
-
-    ldr x25, [sp]
-    add sp, sp, #8
-
-    ldr x24, [sp]
-    add sp, sp, #8
-
-    ldr x23, [sp]
-    add sp, sp, #8
-
-    ldr x22, [sp]
-    add sp, sp, #8
-
-    ldr x21, [sp]
-    add sp, sp, #8
-
-    ldr x20, [sp]
-    add sp, sp, #8
-
-    ldr x19, [sp]
-    add sp, sp, #8
-
-    // 3. Return to restored x30
+    // Our job here is done
     ret

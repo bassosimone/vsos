@@ -53,7 +53,7 @@ static int64_t __sched_thread_start_locked(sched_thread_main_t *main, void *opaq
 		return -EAGAIN;
 	}
 
-	// 3. just in case zero the thread
+	// 3. just in case zero the thread including its stack
 	memset(candidate, 0, sizeof(*candidate));
 
 	// 4. initialize the thread stack invoking MD code
