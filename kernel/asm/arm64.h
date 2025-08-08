@@ -8,9 +8,6 @@
 
 #include <kernel/sys/types.h>
 
-// WFI: wait for interrupts
-static inline void wfi(void) { __asm__ volatile("wfi"); }
-
 // DSB: data synchronization barrier.
 //
 // Similar to Zig's `.SeqCst`.
@@ -22,12 +19,22 @@ static inline void wfi(void) { __asm__ volatile("wfi"); }
 // 2. Page table updates
 //
 // 3. System state transitions
-static inline void dsb_sy(void) { __asm__ volatile("dsb sy" ::: "memory"); }
+static inline void dsb_sy(void) {
+	__asm__ volatile("dsb sy" ::: "memory");
+}
+
+// WFI: wait for interrupts
+static inline void wfi(void) {
+	dsb_sy();
+	__asm__ volatile("wfi");
+}
 
 // ISB: instruction synchronization barrier.
 //
 // Required after system register writes (e.g., TTBR, CPACR).
-static inline void isb(void) { __asm__ volatile("isb" ::: "memory"); }
+static inline void isb(void) {
+	__asm__ volatile("isb" ::: "memory");
+}
 
 // Enable or disable access to FP/SIMD registers at EL0 and EL1.
 //
@@ -63,16 +70,22 @@ static inline void __enable_disable_fp_simd(bool enable) {
 // Required if Clang generates NEON or floating-point instructions (e.g. for
 // `printk`, `memcpy`, etc.). Without this, such instructions trap at 0x200 with
 // exception class 0x7 (Undefined Instruction).
-static inline void enable_fp_simd(void) { __enable_disable_fp_simd(true); }
+static inline void enable_fp_simd(void) {
+	__enable_disable_fp_simd(true);
+}
 
 // Disallow FP/SIMD usage at EL0 and EL1 and restores traps on use.
-static inline void disable_fp_simd(void) { __enable_disable_fp_simd(false); }
+static inline void disable_fp_simd(void) {
+	__enable_disable_fp_simd(false);
+}
 
 // DMB: data memory barrier.
 //
 // Before a read, similar to Zig's `.Acquire`.
 //
 // After a write, similar to Zig's `.Release`.
-static inline void dmb_sy(void) { __asm__ volatile("dmb sy" ::: "memory"); }
+static inline void dmb_sy(void) {
+	__asm__ volatile("dmb sy" ::: "memory");
+}
 
 #endif // KERNEL_ASM_ARM64
