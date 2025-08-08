@@ -15,4 +15,7 @@ void __sched_clock_init(void);
 // Called from the IRQ vector; must acknowledge and re-arm the timer.
 void sched_clock_irq(void);
 
+// Returns true if the current quantum has expired.
+bool sched_should_reschedule(void);
+
 #endif // KERNEL_SCHED_CLOCK_H

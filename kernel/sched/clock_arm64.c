@@ -5,6 +5,9 @@
 #include <kernel/asm/arm64.h>	// for dsb_sy, etc.
 #include <kernel/sched/clock.h> // for sched_clock_init, etc.
 
+// Flag indicating we should reschedule
+static uint64_t need_sched = 0;
+
 // Returns the number of ticks per second used by the hardware.
 static inline uint64_t mrs_cntfrq_el0(void) {
 	uint64_t v;
@@ -47,6 +50,9 @@ void __sched_clock_init(void) {
 
 void sched_clock_irq(void) {
 	__sched_clock_rearm();
-	// TODO(bassosimone): call into scheduler
-	// __sched_preempt_tick();
+	__atomic_store_n(&need_sched, 1, __ATOMIC_RELEASE);
+}
+
+bool sched_should_reschedule(void) {
+	return __atomic_exchange_n(&need_sched, 0, __ATOMIC_ACQUIRE) != 0;
 }
