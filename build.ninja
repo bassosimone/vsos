@@ -31,6 +31,7 @@ rule kernel_incbin
   description = CC INCBIN $out
 
 build libc/errno/errno.o: user_cc libc/errno/errno.c
+build libc/string/memcpy_user.o: user_cc libc/string/memcpy.c
 build libc/string/memset_user.o: user_cc libc/string/memset.c
 build libc/string/strncmp_user.o: user_cc libc/string/strncmp.c
 build libc/unistd/read.o: user_cc libc/unistd/read.c
@@ -38,7 +39,7 @@ build libc/unistd/syscall_arm64.o: user_cc libc/unistd/syscall_arm64.c
 build libc/unistd/write.o: user_cc libc/unistd/write.c
 
 build shell/shell.o: user_cc shell/shell.c
-build shell.elf: user_ld libc/errno/errno.o libc/string/memset_user.o libc/string/strncmp_user.o libc/unistd/read.o libc/unistd/syscall_arm64.o libc/unistd/write.o shell/shell.o
+build shell.elf: user_ld libc/errno/errno.o libc/string/memcpy_user.o libc/string/memset_user.o libc/string/strncmp_user.o libc/unistd/read.o libc/unistd/syscall_arm64.o libc/unistd/write.o shell/shell.o
 build shell.bin: user_objcopy shell.elf
 
 build kernel/boot/boot_arm64.o: kernel_cc kernel/boot/boot_arm64.c
@@ -65,7 +66,8 @@ build kernel/tty/uart_arm64.o: kernel_cc kernel/tty/uart_arm64.c
 
 build kernel/uspace/shell.o: kernel_incbin kernel/uspace/shell.S | shell.bin
 
+build libc/string/memcpy_kernel.o: kernel_cc libc/string/memcpy.c
 build libc/string/memset_kernel.o: kernel_cc libc/string/memset.c
 build libc/string/strncmp_kernel.o: kernel_cc libc/string/strncmp.c
 
-build kernel.elf: kernel_ld kernel/boot/boot_arm64.o kernel/boot/irq_arm64.o kernel/boot/irq_vector_arm64.o kernel/core/panic.o kernel/core/printk.o kernel/core/panic_arm64.o kernel/mm/vmap_arm64.o kernel/mm/vmap.o kernel/mm/palloc.o kernel/sched/clock_arm64.o kernel/sched/switch_arm64.o kernel/sched/thread.o kernel/sched/thread_arm64.o kernel/sys/syscall_arm64.o kernel/tty/uart.o kernel/tty/uart_arm64.o kernel/uspace/shell.o libc/string/memset_kernel.o libc/string/strncmp_kernel.o
+build kernel.elf: kernel_ld kernel/boot/boot_arm64.o kernel/boot/irq_arm64.o kernel/boot/irq_vector_arm64.o kernel/core/panic.o kernel/core/printk.o kernel/core/panic_arm64.o kernel/mm/vmap_arm64.o kernel/mm/vmap.o kernel/mm/palloc.o kernel/sched/clock_arm64.o kernel/sched/switch_arm64.o kernel/sched/thread.o kernel/sched/thread_arm64.o kernel/sys/syscall_arm64.o kernel/tty/uart.o kernel/tty/uart_arm64.o kernel/uspace/shell.o libc/string/memcpy_kernel.o libc/string/memset_kernel.o libc/string/strncmp_kernel.o
