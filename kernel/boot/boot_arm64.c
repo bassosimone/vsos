@@ -1,16 +1,18 @@
-// File: kernel/boot/boot.c
+// File: kernel/boot/boot_arm64.c
 // Purpose: Kernel entry point for ARM64
 // SPDX-License-Identifier: MIT
 // Adapted from: https://github.com/nuta/operating-system-in-1000-lines
 
-#include <kernel/asm/arm64.h>	 // for enable_fp_simd
-#include <kernel/boot/layout.h>	 // for __stack_top, __bss, __bss_end
-#include <kernel/core/panic.h>	 // for panic
-#include <kernel/core/printk.h>	 // for printk
-#include <kernel/sched/thread.h> // for sched_thread
-#include <kernel/sys/types.h>	 // for size_t
-#include <kernel/tty/uart.h>	 // for uart_init
-#include <libc/string/string.h>	 // for memset
+#include <kernel/asm/arm64.h>	   // for enable_fp_simd
+#include <kernel/boot/irq_arm64.h> // for gicv2_init
+#include <kernel/boot/layout.h>	   // for __stack_top, __bss, __bss_end
+#include <kernel/core/panic.h>	   // for panic
+#include <kernel/core/printk.h>	   // for printk
+#include <kernel/sched/clock.h>	   // for sched_clock_init
+#include <kernel/sched/thread.h>   // for sched_thread_run
+#include <kernel/sys/types.h>	   // for size_t
+#include <kernel/tty/uart.h>	   // for uart_init
+#include <libc/string/string.h>	   // for memset
 
 static void thread_hello(void *opaque) {
 	(void)opaque;
@@ -43,15 +45,21 @@ void __kernel_main(void) {
 	uart_init();
 	printk("initialized uart\n");
 
-	// 3. create a thread for saying hello to the world
+	// 3. intialize the GICv2
+	gicv2_init();
+
+	// 4. create a thread for saying hello to the world
 	int64_t tid = sched_thread_start(thread_hello, /* opaque */ 0, /* flags */ 0);
 	printk("started hello thread: %d\n", tid);
 
-	// 4. create a thread for saying goodbye to the world
+	// 5. create a thread for saying goodbye to the world
 	tid = sched_thread_start(thread_goodbye, /* opaque */ 0, /* flags */ 0);
 	printk("started goodbye thread: %d\n", tid);
 
-	// 5. run the thread scheduler
+	// 6. initialize the scheduler clock
+	sched_clock_init();
+
+	// 7. run the thread scheduler
 	sched_thread_run();
 }
 
