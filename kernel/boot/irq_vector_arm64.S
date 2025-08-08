@@ -44,80 +44,118 @@ __vectors_el1:
     .align 4
     .type el1h_irq, %function
 el1h_irq:
-    // Frame size = 288 bytes (16-byte aligned)
-    // Layout:
-    //   [  0] q0  [ 16] q1  [ 32] q2  [ 48] q3  [ 64] q4  [ 80] q5  [ 96] q6 [112] q7
+    // Interrupts are disabled when we enter here and we keep
+    // them disable for the whole handler duration.
     //
-    //   [128] x0  [136] x1  [144] x2  [152] x3  [160] x4  [168] x5  [176] x6
-    //   [184] x7  [192] x8  [200] x9  [208] x10 [216] x11 [224] x12 [232] x13
-    //   [240] x14 [248] x15 [256] x16 [264] x17 [272] x18 [280] x30
-    sub     sp, sp, #288
+    // Basically this means no nested interrupts.
 
-    // Save SIMD/FP q0–q7 (caller-saved)
-    str     q0,  [sp, #0]
-    str     q1,  [sp, #16]
-    str     q2,  [sp, #32]
-    str     q3,  [sp, #48]
-    str     q4,  [sp, #64]
-    str     q5,  [sp, #80]
-    str     q6,  [sp, #96]
-    str     q7,  [sp, #112]
+    // Bump the stack frame to make space for all the variables to save.
+    sub sp, sp, #800
 
-    // Save GPR caller-saved x0–x18 and LR (x30)
-    str     x0,  [sp, #128]
-    str     x1,  [sp, #136]
-    str     x2,  [sp, #144]
-    str     x3,  [sp, #152]
-    str     x4,  [sp, #160]
-    str     x5,  [sp, #168]
-    str     x6,  [sp, #176]
-    str     x7,  [sp, #184]
-    str     x8,  [sp, #192]
-    str     x9,  [sp, #200]
-    str     x10, [sp, #208]
-    str     x11, [sp, #216]
-    str     x12, [sp, #224]
-    str     x13, [sp, #232]
-    str     x14, [sp, #240]
-    str     x15, [sp, #248]
-    str     x16, [sp, #256]
-    str     x17, [sp, #264]
-    str     x18, [sp, #272]
-    str     x30, [sp, #280]
+    // Save general purpose registers and user stack pointer.
+    stp x0,  x1,  [sp, #0]
+    stp x2,  x3,  [sp, #16]
+    stp x4,  x5,  [sp, #32]
+    stp x6,  x7,  [sp, #48]
+    stp x8,  x9,  [sp, #64]
+    stp x10, x11, [sp, #80]
+    stp x12, x13, [sp, #96]
+    stp x14, x15, [sp, #112]
+    stp x16, x17, [sp, #128]
+    stp x18, x19, [sp, #144]
+    stp x20, x21, [sp, #160]
+    stp x22, x23, [sp, #176]
+    stp x24, x25, [sp, #192]
+    stp x26, x27, [sp, #208]
+    stp x28, x29, [sp, #224]
+    mrs x19, sp_el0
+    stp x30, x19, [sp, #240]
 
+    // Save all SIMD/FP registers (q0-q31)
+    stp q0, q1, [sp, #256]
+    stp q2, q3, [sp, #288]
+    stp q4, q5, [sp, #320]
+    stp q6, q7, [sp, #352]
+    stp q8, q9, [sp, #384]
+    stp q10, q11, [sp, #416]
+    stp q12, q13, [sp, #448]
+    stp q14, q15, [sp, #480]
+    stp q16, q17, [sp, #512]
+    stp q18, q19, [sp, #544]
+    stp q20, q21, [sp, #576]
+    stp q22, q23, [sp, #608]
+    stp q24, q25, [sp, #640]
+    stp q26, q27, [sp, #672]
+    stp q28, q29, [sp, #704]
+    stp q30, q31, [sp, #736]
+
+    // Save control registers
+    mrs x19, elr_el1
+    str x19, [sp, #768]
+    mrs x20, spsr_el1
+    str x20, [sp, #776]
+
+    // Save floating point control/status registers
+    mrs x19, fpcr
+    str x19, [sp, #784]
+    mrs x20, fpsr
+    str x20, [sp, #792]
+
+    // Handle the interrupt passing the frame as context
+    mov     x0, sp
     bl      irq_dispatch_el1h
 
-    // Restore GPRs
-    ldr     x30, [sp, #280]
-    ldr     x18, [sp, #272]
-    ldr     x17, [sp, #264]
-    ldr     x16, [sp, #256]
-    ldr     x15, [sp, #248]
-    ldr     x14, [sp, #240]
-    ldr     x13, [sp, #232]
-    ldr     x12, [sp, #224]
-    ldr     x11, [sp, #216]
-    ldr     x10, [sp, #208]
-    ldr     x9,  [sp, #200]
-    ldr     x8,  [sp, #192]
-    ldr     x7,  [sp, #184]
-    ldr     x6,  [sp, #176]
-    ldr     x5,  [sp, #168]
-    ldr     x4,  [sp, #160]
-    ldr     x3,  [sp, #152]
-    ldr     x2,  [sp, #144]
-    ldr     x1,  [sp, #136]
-    ldr     x0,  [sp, #128]
+    // Restore floating point control/status registers
+    ldr x20, [sp, #792]
+    msr fpsr, x20
+    ldr x19, [sp, #784]
+    msr fpcr, x19
 
-    // Restore SIMD/FP
-    ldr     q7,  [sp, #112]
-    ldr     q6,  [sp, #96]
-    ldr     q5,  [sp, #80]
-    ldr     q4,  [sp, #64]
-    ldr     q3,  [sp, #48]
-    ldr     q2,  [sp, #32]
-    ldr     q1,  [sp, #16]
-    ldr     q0,  [sp, #0]
+    // Restore control registers
+    ldr x20, [sp, #776]
+    msr spsr_el1, x20
+    ldr x19, [sp, #768]
+    msr elr_el1, x19
 
-    add     sp, sp, #288
+    // Restore all SIMD/FP registers (q0-q31)
+    ldp q30, q31, [sp, #736]
+    ldp q28, q29, [sp, #704]
+    ldp q26, q27, [sp, #672]
+    ldp q24, q25, [sp, #640]
+    ldp q22, q23, [sp, #608]
+    ldp q20, q21, [sp, #576]
+    ldp q18, q19, [sp, #544]
+    ldp q16, q17, [sp, #512]
+    ldp q14, q15, [sp, #480]
+    ldp q12, q13, [sp, #448]
+    ldp q10, q11, [sp, #416]
+    ldp q8,  q9,  [sp, #384]
+    ldp q6,  q7,  [sp, #352]
+    ldp q4,  q5,  [sp, #320]
+    ldp q2,  q3,  [sp, #288]
+    ldp q0,  q1,  [sp, #256]
+
+    // Restore general purpose registers and user stack pointer
+    ldp x30, x19, [sp, #240]
+    msr sp_el0, x19
+    ldp x28, x29, [sp, #224]
+    ldp x26, x27, [sp, #208]
+    ldp x24, x25, [sp, #192]
+    ldp x22, x23, [sp, #176]
+    ldp x20, x21, [sp, #160]
+    ldp x18, x19, [sp, #144]
+    ldp x16, x17, [sp, #128]
+    ldp x14, x15, [sp, #112]
+    ldp x12, x13, [sp, #96]
+    ldp x10, x11, [sp, #80]
+    ldp x8,  x9,  [sp, #64]
+    ldp x6,  x7,  [sp, #48]
+    ldp x4,  x5,  [sp, #32]
+    ldp x2,  x3,  [sp, #16]
+    ldp x0,  x1,  [sp, #0]
+
+    // Unwind the stack
+    add sp, sp, #800
+
+    // Return from exception
     eret

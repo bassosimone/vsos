@@ -63,23 +63,37 @@ void gicv2_init(void) {
 	printk("gicv2: enabled, PPI %u unmasked\n", IRQ_PPI_CNTP);
 }
 
-static inline unsigned gicv2_ack(void) {
-	return (unsigned)(GICC_IAR & 0x3FFu); // INTID in low bits
+static inline uint32_t gicv2_ack(void) {
+	return GICC_IAR;
 }
 
 static inline void gicv2_eoi(unsigned iar) {
 	GICC_EOIR = iar;
 }
 
-void irq_dispatch_el1h(void) {
-	unsigned iar = gicv2_ack();
-	unsigned id = iar & 0x3FFu;
+void irq_dispatch_el1h(struct trapframe *frame) {
+	// We will use the frame in the future to context switch
+	(void)frame;
 
-	if (id == IRQ_PPI_CNTP) {
-		sched_clock_irq();
-	} else {
-		printk("spurious IRQ %u\n", id);
+	// Acknowledge the IRQ and get the context
+	unsigned iar = gicv2_ack();
+	unsigned irqid = iar & 0x3FFu;
+
+	// Handle spurious IRQ
+	if (irqid >= 1020) {
+		return;
 	}
 
+	// Handle each IRQ type
+	switch (irqid) {
+	case IRQ_PPI_CNTP:
+		sched_clock_irq();
+		break;
+
+	default:
+		printk("unhandled IRQ %u\n", irqid);
+	}
+
+	// We're done handling this interrupt
 	gicv2_eoi(iar);
 }
