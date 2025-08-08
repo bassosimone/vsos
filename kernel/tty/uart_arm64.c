@@ -4,7 +4,7 @@
 // Adapted from: https://github.com/nuta/operating-system-in-1000-lines
 
 #include <kernel/asm/arm64.h>
-#include <kernel/errno.h>
+#include <kernel/sys/errno.h>
 #include <kernel/tty/uart.h>
 
 // PL011 UART base address in QEMU virt
@@ -63,7 +63,9 @@ int16_t uart_try_read(void) {
 	return (int16_t)(UARTDR & 0xFF);
 }
 
-bool uart_poll_read(void) { return (UARTFR & UARTFR_RXFE) == 0; }
+bool uart_poll_read(void) {
+	return (UARTFR & UARTFR_RXFE) == 0;
+}
 
 int16_t uart_try_write(uint8_t ch) {
 	if (!uart_poll_write()) {
@@ -74,4 +76,6 @@ int16_t uart_try_write(uint8_t ch) {
 	return 0;
 }
 
-bool uart_poll_write(void) { return (UARTFR & UARTFR_TXFF) == 0; }
+bool uart_poll_write(void) {
+	return (UARTFR & UARTFR_TXFF) == 0;
+}

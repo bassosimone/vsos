@@ -5,8 +5,8 @@
 #include <kernel/core/assert.h>	  // for KERNEL_ASSERT
 #include <kernel/core/panic.h>	  // for panic
 #include <kernel/core/spinlock.h> // for struct spinlock
-#include <kernel/errno.h>	  // for EAGAIN
 #include <kernel/sched/thread.h>  // for sched_thread, etc.
+#include <kernel/sys/errno.h>	  // for EAGAIN
 #include <kernel/sys/param.h>	  // for SCHED_MAX_THREADS
 #include <libc/string/string.h>	  // for memset
 

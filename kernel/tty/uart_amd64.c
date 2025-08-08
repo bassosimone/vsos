@@ -5,7 +5,7 @@
 
 #include <kernel/asm/amd64.h>
 #include <kernel/core/assert.h>
-#include <kernel/errno.h>
+#include <kernel/sys/errno.h>
 #include <kernel/sys/types.h>
 #include <kernel/tty/uart.h>
 
@@ -38,7 +38,9 @@ int16_t uart_try_read(void) {
 	return inb(COM1 + UART_DATA);
 }
 
-bool uart_poll_read(void) { return (inb(COM1 + UART_LSR) & UART_LSR_DR) != 0; }
+bool uart_poll_read(void) {
+	return (inb(COM1 + UART_LSR) & UART_LSR_DR) != 0;
+}
 
 int16_t uart_try_write(uint8_t ch) {
 	if (!uart_poll_write()) {
@@ -48,4 +50,6 @@ int16_t uart_try_write(uint8_t ch) {
 	return 0;
 }
 
-bool uart_poll_write(void) { return (inb(COM1 + UART_LSR) & UART_LSR_THRE) != 0; }
+bool uart_poll_write(void) {
+	return (inb(COM1 + UART_LSR) & UART_LSR_THRE) != 0;
+}
