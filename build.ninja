@@ -31,10 +31,12 @@ build kernel/sched/switch_arm64.o: cc_asm kernel/sched/switch_arm64.S
 build kernel/sched/thread.o: cc kernel/sched/thread.c
 build kernel/sched/thread_arm64.o: cc kernel/sched/thread_arm64.c
 
+build kernel/sys/syscall_arm64.o: cc kernel/sys/syscall_arm64.c
+
 build kernel/tty/uart.o: cc kernel/tty/uart.c
 build kernel/tty/uart_arm64.o: cc kernel/tty/uart_arm64.c
 
 build libc/string/memset.o: cc libc/string/memset.c
 build libc/string/strncmp.o: cc libc/string/strncmp.c
 
-build kernel.elf: link kernel/boot/boot_arm64.o kernel/boot/irq_arm64.o kernel/boot/irq_vector_arm64.o kernel/core/panic.o kernel/core/printk.o kernel/core/panic_arm64.o kernel/mm/vmap_arm64.o kernel/mm/vmap.o kernel/mm/palloc.o kernel/sched/clock_arm64.o kernel/sched/switch_arm64.o kernel/sched/thread.o kernel/sched/thread_arm64.o kernel/tty/uart.o kernel/tty/uart_arm64.o libc/string/memset.o libc/string/strncmp.o
+build kernel.elf: link kernel/boot/boot_arm64.o kernel/boot/irq_arm64.o kernel/boot/irq_vector_arm64.o kernel/core/panic.o kernel/core/printk.o kernel/core/panic_arm64.o kernel/mm/vmap_arm64.o kernel/mm/vmap.o kernel/mm/palloc.o kernel/sched/clock_arm64.o kernel/sched/switch_arm64.o kernel/sched/thread.o kernel/sched/thread_arm64.o kernel/sys/syscall_arm64.o kernel/tty/uart.o kernel/tty/uart_arm64.o libc/string/memset.o libc/string/strncmp.o

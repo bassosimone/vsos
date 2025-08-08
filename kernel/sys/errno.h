@@ -6,10 +6,18 @@
 #ifndef KERNEL_SYS_ERRNO_H
 #define KERNEL_SYS_ERRNO_H
 
+// We try to use the same numbers used by Linux
+
+// Bad file descriptor.
+#define EBADF 9
+
 // Resource temporarily unavailable.
 #define EAGAIN 11
 
 // Operation would block.
 #define EWOULDBLOCK EAGAIN
+
+// Function not implemented.
+#define ENOSYS 38
 
 #endif // KERNEL_SYS_ERRNO_H

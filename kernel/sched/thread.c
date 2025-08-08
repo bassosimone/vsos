@@ -2,6 +2,11 @@
 // Purpose: kernel and user thread scheduler
 // SPDX-License-Identifier: MIT
 
+// TODO(bassosimone): maybe consider moving more assembly code
+// related to context switching into the scheduler. After all, it
+// seems scheduler code more than boot code.
+
+#include <kernel/boot/irq.h>	  // for irq_restore_user_and_eret
 #include <kernel/core/assert.h>	  // for KERNEL_ASSERT
 #include <kernel/core/panic.h>	  // for panic
 #include <kernel/core/spinlock.h> // for struct spinlock
@@ -209,4 +214,31 @@ void __sched_thread_yield_without_interrupts(void) {
 
 	// 5. ensure that we don't arrive here
 	panic("thread resumed execution after terminating");
+}
+
+[[noreturn]] void sched_return_to_user(uintptr_t raw_frame) {
+	// Ensure we have current
+	KERNEL_ASSERT(current != 0);
+
+	// Save the raw frame of the thread we're going to suspend
+	current->trapframe = raw_frame;
+
+	// Check whether we should reschedule and switch if it's needed
+	if (sched_should_reschedule()) {
+		__sched_thread_yield_without_interrupts();
+	}
+
+	// Ensure we still have current
+	KERNEL_ASSERT(current != 0);
+
+	// Ensure we have a trap frame
+	KERNEL_ASSERT(current->trapframe != 0);
+
+	// TODO(bassosimone): ensure the trapframe is in the stack bounds?
+
+	// The venerable `call/cc` is alive and fights alongside us
+	irq_restore_user_and_eret(current->trapframe);
+
+	// Just make sure we don't arrive here
+	__builtin_unreachable();
 }

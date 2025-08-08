@@ -50,6 +50,9 @@ struct sched_thread {
 
 	// Flags modifying the thread behavior (see SCHED_THREAD_FLAG_xxx).
 	uint64_t flags;
+
+	// The raw trap frame pointer, which points inside the stack.
+	uintptr_t trapframe;
 };
 
 // Starts a thread with the given main function and the given flags.
@@ -103,5 +106,11 @@ void __sched_thread_stack_init(struct sched_thread *thread);
 // This function must be called once at the end of the boot and assumes that
 // no one has run other threads or called sched_thread_yield.
 [[noreturn]] void sched_thread_run(void);
+
+// Code that returns to userspace possibly context switching current.
+//
+// This function is called while finishing to handle a system call
+// and interrupts are disabled at that moment in time.
+[[noreturn]] void sched_return_to_user(uintptr_t raw_frame);
 
 #endif // KERNEL_SCHED_THREAD_H

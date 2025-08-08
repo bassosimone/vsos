@@ -57,7 +57,7 @@ __sched_switch:
     //
     // 1. the next value is in x1
     //
-    // 2. next->sp is the first entry in prev
+    // 2. next->sp is the first entry in next
 1:
     ldr x2, [x1]
     mov sp, x2
