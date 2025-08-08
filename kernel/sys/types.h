@@ -52,10 +52,12 @@ typedef signed long long int64_t;
 typedef uint64_t size_t;
 typedef uint64_t uintptr_t;
 typedef int64_t ssize_t;
+typedef int64_t intptr_t;
 
 // Limits definitions for the additional integer types.
 #define SIZE_MAX UINT64_MAX
 #define UINTPTR_MAX UINT64_MAX
 #define SSIZE_MAX INT64_MAX
+#define INTPTR_MAX INT64_MAX
 
 #endif // KERNEL_SYS_TYPES_H
