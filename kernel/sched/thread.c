@@ -114,10 +114,15 @@ static void __unlock_and_switch_to(struct sched_thread *next) {
 	// 3. Release the spinlock before switching
 	spinlock_release(&lock);
 
-	// 4. check for invariant assumed by __sched_switch
+	// 4. do not perform any context switching if the two threads are equal
+	if (prev == next) {
+		return;
+	}
+
+	// 5. check for invariant assumed by __sched_switch
 	static_assert(__builtin_offsetof(struct sched_thread, sp) == 0, "sp must be at offset 0");
 
-	// 5. Use MD code to switch context
+	// 6. Use MD code to switch context
 	__sched_switch(prev, next);
 }
 
