@@ -44,8 +44,12 @@ __vectors_el1:
     b .
 
     // 0x480: IRQ from lower EL using AArch64
+    // TODO(bassosimone): this is technical debt. However, for now it
+    // is fine to reuse the same code. We lose the ability to reschedule
+    // when an interrupt happens in user code. Also, the function must
+    // save everything, and it could be leaner for the kernel.
     .balign 128
-    b .
+    b el1h_irq
 
     // 0x500: FIQ from lower EL using AArch64
     .balign 128
