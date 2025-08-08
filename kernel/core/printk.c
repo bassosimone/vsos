@@ -12,7 +12,7 @@
 // We will consider moving this function elsewhere if needed. For now, it
 // seems to be an implementation detail of printk.
 static inline int16_t uart_putchar(uint8_t ch) {
-	while (!uart_poll_write()) {
+	while (!uart_writable()) {
 		// TODO(bassosimone): should we yield here?
 	}
 	int16_t rv = uart_try_write(ch);

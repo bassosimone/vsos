@@ -32,24 +32,24 @@ void uart_init(void) {
 }
 
 int16_t uart_try_read(void) {
-	if (!uart_poll_read()) {
+	if (!uart_readable()) {
 		return -EAGAIN;
 	}
 	return inb(COM1 + UART_DATA);
 }
 
-bool uart_poll_read(void) {
+bool uart_readable(void) {
 	return (inb(COM1 + UART_LSR) & UART_LSR_DR) != 0;
 }
 
 int16_t uart_try_write(uint8_t ch) {
-	if (!uart_poll_write()) {
+	if (!uart_writable()) {
 		return -EAGAIN;
 	}
 	outb(COM1 + UART_DATA, ch);
 	return 0;
 }
 
-bool uart_poll_write(void) {
+bool uart_writable(void) {
 	return (inb(COM1 + UART_LSR) & UART_LSR_THRE) != 0;
 }

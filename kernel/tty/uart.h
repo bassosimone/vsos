@@ -16,7 +16,7 @@ void uart_init(void);
 int16_t uart_try_read(void);
 
 // Returns true when the device is readable.
-bool uart_poll_read(void);
+bool uart_readable(void);
 
 // Attempts to write the given character to the UART device.
 //
@@ -24,6 +24,6 @@ bool uart_poll_read(void);
 int16_t uart_try_write(uint8_t ch);
 
 // Returns true when the device is writable.
-bool uart_poll_write(void);
+bool uart_writable(void);
 
 #endif // KERNEL_TTY_UART_H

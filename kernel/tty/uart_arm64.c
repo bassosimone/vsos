@@ -56,19 +56,19 @@ void uart_init(void) {
 }
 
 int16_t uart_try_read(void) {
-	if (!uart_poll_read()) {
+	if (!uart_readable()) {
 		return -EAGAIN;
 	}
 	dsb_sy(); // Ensure the subsequent read "happens after"
 	return (int16_t)(UARTDR & 0xFF);
 }
 
-bool uart_poll_read(void) {
+bool uart_readable(void) {
 	return (UARTFR & UARTFR_RXFE) == 0;
 }
 
 int16_t uart_try_write(uint8_t ch) {
-	if (!uart_poll_write()) {
+	if (!uart_writable()) {
 		return -EAGAIN;
 	}
 	dsb_sy(); // Ensure the subsequent write "happens after"
@@ -76,6 +76,6 @@ int16_t uart_try_write(uint8_t ch) {
 	return 0;
 }
 
-bool uart_poll_write(void) {
+bool uart_writable(void) {
 	return (UARTFR & UARTFR_TXFF) == 0;
 }
