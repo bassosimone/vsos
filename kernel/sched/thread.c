@@ -142,41 +142,50 @@ static void __unlock_and_switch_to(struct sched_thread *next) {
 	panic("unreachable");
 }
 
-void __sched_thread_yield_without_interrupts(void) {
-	// 1. Acquire the spinlock to prevent anyone else with messing with threads.
-	spinlock_acquire(&lock);
-
-	// 2. ensure we have a idle thread
+// Function that selects the next thread to run or the idle thread
+static struct sched_thread *select_runnable(void) {
+	// 1. ensure we have a idle thread
 	KERNEL_ASSERT(idle_thread != 0);
 
-	// 3. ensure we have a current thread
+	// 2. ensure we have a current thread
 	KERNEL_ASSERT(current != 0);
 
-	// 4. Switch to a runnable thread using a ~fair round-robin scheduling.
+	// 3. Switch to a runnable thread using a ~fair round-robin scheduling.
 	for (size_t idx = 0; idx < SCHED_MAX_THREADS; idx++) {
-		// 4.1. get the next thread we should consider for running.
+		// 3.1. get the next thread we should consider for running.
 		struct sched_thread *next = &threads[fair_id];
 		fair_id = (fair_id == SCHED_MAX_THREADS - 1) ? 0 : fair_id + 1;
 
-		// 4.2. avoid giving CPU time to the idle thread.
+		// 3.2. avoid giving CPU time to the idle thread.
 		if (next == idle_thread) {
 			continue;
 		}
 
-		// 4.3. skip threads that are not marked as runnable.
+		// 3.3. skip threads that are not marked as runnable.
 		if (next->state != SCHED_THREAD_STATE_RUNNABLE) {
 			continue;
 		}
 
-		// 4.4. swap the current thread with the next one.
-		__unlock_and_switch_to(next);
-
-		// 4.5. when the thread is runnable again we'll end up here.
-		return;
+		// 3.4. return the candidate.
+		return next;
 	}
 
-	// 5. if we end up here, we switch to the idle thread.
-	__unlock_and_switch_to(idle_thread);
+	// 5. if we end up here, we return the idle thread.
+	return idle_thread;
+}
+
+void __sched_thread_yield_without_interrupts(void) {
+	// 1. Acquire the spinlock to prevent anyone else with messing with threads.
+	spinlock_acquire(&lock);
+
+	// 2. obtain the next thread we should run
+	struct sched_thread *next = select_runnable();
+
+	// 3. ensure it is not NULL
+	KERNEL_ASSERT(next != 0);
+
+	// 4. perform the context switch proper
+	__unlock_and_switch_to(next);
 }
 
 [[noreturn]] void sched_thread_exit(void *retval) {
