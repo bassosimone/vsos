@@ -1,46 +1,71 @@
 # File: build.ninja
 # SPDX-License-Identifier: MIT
-# Purpose: Build the kernel
+# Purpose: Build the project
 
-rule cc
+rule kernel_cc
   command = clang -I. -O2 -std=c23 -target aarch64-none-elf -ffreestanding -nostdlib -Wall -Wextra -c $in -o $out
-  description = CC $out
+  description = CC KERNEL $out
 
-rule cc_asm
+rule kernel_asm
   command = clang -I. -O2 -std=c23 -target aarch64-none-elf -ffreestanding -nostdlib -Wall -Wextra -c $in -o $out
-  description = CC ASM $out
+  description = CC ASM KERNEL $out
 
-rule link
+rule kernel_ld
   command = ld.lld -T kernel/boot/layout_arm64.ld -nostdlib $in -o $out
-  description = LD $out
+  description = LD KERNEL $out
 
-build kernel/boot/boot_arm64.o: cc kernel/boot/boot_arm64.c
-build kernel/boot/irq_arm64.o: cc kernel/boot/irq_arm64.c
-build kernel/boot/irq_vector_arm64.o: cc_asm kernel/boot/irq_vector_arm64.S
+rule user_cc
+  command = clang -I. -O2 -std=c23 -fno-pic -target aarch64-none-elf -ffreestanding -nostdlib -Wall -Wextra -c $in -o $out
+  description = CC USER $out
 
-build kernel/core/panic.o: cc kernel/core/panic.c
-build kernel/core/printk.o: cc kernel/core/printk.c
-build kernel/core/panic_arm64.o: cc kernel/core/panic_arm64.c
+rule user_ld
+  command = ld.lld -T shell/layout_arm64.ld -nostdlib $in -o $out
+  description = LD USER $out
 
-build kernel/mm/vmap_arm64.o: cc kernel/mm/vmap_arm64.c
-build kernel/mm/vmap.o: cc kernel/mm/vmap.c
-build kernel/mm/palloc.o: cc kernel/mm/palloc.c
+rule user_objcopy
+  command = llvm-objcopy -O binary $in $out
+  description = OBJCOPY USER $out
 
-build kernel/sched/clock_arm64.o: cc kernel/sched/clock_arm64.c
-build kernel/sched/switch_arm64.o: cc_asm kernel/sched/switch_arm64.S
-build kernel/sched/thread.o: cc kernel/sched/thread.c
-build kernel/sched/thread_arm64.o: cc kernel/sched/thread_arm64.c
+rule kernel_incbin
+  command = clang -I. -O2 -target aarch64-none-elf -c $in -o $out
+  description = CC INCBIN $out
 
-build kernel/sys/syscall_arm64.o: cc kernel/sys/syscall_arm64.c
+build libc/errno/errno.o: user_cc libc/errno/errno.c
+build libc/string/memset_user.o: user_cc libc/string/memset.c
+build libc/string/strncmp_user.o: user_cc libc/string/strncmp.c
+build libc/unistd/read.o: user_cc libc/unistd/read.c
+build libc/unistd/syscall_arm64.o: user_cc libc/unistd/syscall_arm64.c
+build libc/unistd/write.o: user_cc libc/unistd/write.c
 
-build kernel/tty/uart.o: cc kernel/tty/uart.c
-build kernel/tty/uart_arm64.o: cc kernel/tty/uart_arm64.c
+build shell/shell.o: user_cc shell/shell.c
+build shell.elf: user_ld libc/errno/errno.o libc/string/memset_user.o libc/string/strncmp_user.o libc/unistd/read.o libc/unistd/syscall_arm64.o libc/unistd/write.o shell/shell.o
+build shell.bin: user_objcopy shell.elf
 
-build libc/errno/errno.o: cc libc/errno/errno.c
-build libc/string/memset.o: cc libc/string/memset.c
-build libc/string/strncmp.o: cc libc/string/strncmp.c
-build libc/unistd/read.o: cc libc/unistd/read.c
-build libc/unistd/syscall_arm64.o: cc libc/unistd/syscall_arm64.c
-build libc/unistd/write.o: cc libc/unistd/write.c
+build kernel/boot/boot_arm64.o: kernel_cc kernel/boot/boot_arm64.c
+build kernel/boot/irq_arm64.o: kernel_cc kernel/boot/irq_arm64.c
+build kernel/boot/irq_vector_arm64.o: kernel_asm kernel/boot/irq_vector_arm64.S
 
-build kernel.elf: link kernel/boot/boot_arm64.o kernel/boot/irq_arm64.o kernel/boot/irq_vector_arm64.o kernel/core/panic.o kernel/core/printk.o kernel/core/panic_arm64.o kernel/mm/vmap_arm64.o kernel/mm/vmap.o kernel/mm/palloc.o kernel/sched/clock_arm64.o kernel/sched/switch_arm64.o kernel/sched/thread.o kernel/sched/thread_arm64.o kernel/sys/syscall_arm64.o kernel/tty/uart.o kernel/tty/uart_arm64.o libc/errno/errno.o libc/string/memset.o libc/string/strncmp.o libc/unistd/read.o libc/unistd/syscall_arm64.o libc/unistd/write.o
+build kernel/core/panic.o: kernel_cc kernel/core/panic.c
+build kernel/core/printk.o: kernel_cc kernel/core/printk.c
+build kernel/core/panic_arm64.o: kernel_cc kernel/core/panic_arm64.c
+
+build kernel/mm/vmap_arm64.o: kernel_cc kernel/mm/vmap_arm64.c
+build kernel/mm/vmap.o: kernel_cc kernel/mm/vmap.c
+build kernel/mm/palloc.o: kernel_cc kernel/mm/palloc.c
+
+build kernel/sched/clock_arm64.o: kernel_cc kernel/sched/clock_arm64.c
+build kernel/sched/switch_arm64.o: kernel_asm kernel/sched/switch_arm64.S
+build kernel/sched/thread.o: kernel_cc kernel/sched/thread.c
+build kernel/sched/thread_arm64.o: kernel_cc kernel/sched/thread_arm64.c
+
+build kernel/sys/syscall_arm64.o: kernel_cc kernel/sys/syscall_arm64.c
+
+build kernel/tty/uart.o: kernel_cc kernel/tty/uart.c
+build kernel/tty/uart_arm64.o: kernel_cc kernel/tty/uart_arm64.c
+
+build kernel/uspace/shell.o: kernel_incbin kernel/uspace/shell.S | shell.bin
+
+build libc/string/memset_kernel.o: kernel_cc libc/string/memset.c
+build libc/string/strncmp_kernel.o: kernel_cc libc/string/strncmp.c
+
+build kernel.elf: kernel_ld kernel/boot/boot_arm64.o kernel/boot/irq_arm64.o kernel/boot/irq_vector_arm64.o kernel/core/panic.o kernel/core/printk.o kernel/core/panic_arm64.o kernel/mm/vmap_arm64.o kernel/mm/vmap.o kernel/mm/palloc.o kernel/sched/clock_arm64.o kernel/sched/switch_arm64.o kernel/sched/thread.o kernel/sched/thread_arm64.o kernel/sys/syscall_arm64.o kernel/tty/uart.o kernel/tty/uart_arm64.o kernel/uspace/shell.o libc/string/memset_kernel.o libc/string/strncmp_kernel.o
