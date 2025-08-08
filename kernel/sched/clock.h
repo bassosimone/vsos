@@ -6,8 +6,9 @@
 
 // Initialize the system Timer to tick at 50 Hz and enable its interrupt.
 //
-// Called once at boot (after enabling interrupts).
-void sched_clock_init(void);
+// Called by the idle thread when it is starting. Do not use this
+// function outside of sched. It is an implementation detail.
+void __sched_clock_init(void);
 
 // Interrupt handler for the scheduler clock.
 //

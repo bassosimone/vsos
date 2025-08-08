@@ -5,6 +5,7 @@
 #include <kernel/core/assert.h>	  // for KERNEL_ASSERT
 #include <kernel/core/panic.h>	  // for panic
 #include <kernel/core/spinlock.h> // for struct spinlock
+#include <kernel/sched/clock.h>	  // for __sched_clock_init
 #include <kernel/sched/thread.h>  // for sched_thread, etc.
 #include <kernel/sys/errno.h>	  // for EAGAIN
 #include <kernel/sys/param.h>	  // for SCHED_MAX_THREADS
@@ -90,6 +91,12 @@ int64_t sched_thread_start(sched_thread_main_t *main, void *opaque, uint64_t fla
 // Loop forever yielding the CPU and then awaiting for interrupts.
 [[noreturn]] static void __idle_main(void *unused) {
 	(void)unused;
+
+	// Start the pre-emptive scheduler
+	__sched_clock_init();
+
+	// Just sleep without consuming resources and yield
+	// the processor as soon as possible.
 	for (;;) {
 		sched_thread_yield();
 		__sched_idle();

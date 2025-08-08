@@ -41,7 +41,7 @@ static void __sched_clock_rearm() {
 	isb();
 }
 
-void sched_clock_init(void) {
+void __sched_clock_init(void) {
 	__sched_clock_rearm();
 }
 

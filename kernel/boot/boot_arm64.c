@@ -56,10 +56,7 @@ void __kernel_main(void) {
 	tid = sched_thread_start(thread_goodbye, /* opaque */ 0, /* flags */ 0);
 	printk("started goodbye thread: %d\n", tid);
 
-	// 6. initialize the scheduler clock
-	sched_clock_init();
-
-	// 7. run the thread scheduler
+	// 6. run the thread scheduler
 	sched_thread_run();
 }
 
