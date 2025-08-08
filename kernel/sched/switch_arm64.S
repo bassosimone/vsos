@@ -1,5 +1,5 @@
     // File: kernel/sched/switch_arm64.S
-    // Purpose: ARM64 process switching code
+    // Purpose: ARM64 thread switching code
     // SPDX-License-Identifier: MIT
 
     .section .text
@@ -10,11 +10,6 @@
     //
     // This function assumes to be called with interrupts disabled.
 __sched_switch:
-    // TODO(bassosimone): when we start using the timer to
-    // switch process, we'll additionally need to disable
-    // interrupts while switching is in progress otherwise
-    // we could clobber the switching state.
-
     // Step 0: skip saving if x0 is zero
     cbz x0, 1f
 

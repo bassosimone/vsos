@@ -1,13 +1,13 @@
     // File: kernel/boot/irq_vector_arm64.S
-    // Purpose: interrupt vector for arm64
+    // Purpose: complete AArch64 EL1 vector table with assembly handlers
     // SPDX-License-Identifier: MIT
 
     .section .vectors, "ax", %progbits
-    .align 11
+    .align 11                        // 2KB alignment for VBAR_EL1
     .global __vectors_el1
     .type   __vectors_el1, %function
 __vectors_el1:
-    // 0x000: Synchronous EL1t
+    // 0x000: Synchronous EL1t (current EL, SP0)
     .balign 128
     b .
 
@@ -23,7 +23,7 @@ __vectors_el1:
     .balign 128
     b .
 
-    // 0x200: Synchronous EL1h
+    // 0x200: Synchronous EL1h (current EL, SPx)
     .balign 128
     b .
 
@@ -39,13 +39,47 @@ __vectors_el1:
     .balign 128
     b .
 
+    // 0x400: Synchronous from lower EL using AArch64 (EL0 64-bit)
+    .balign 128
+    b .
+
+    // 0x480: IRQ from lower EL using AArch64
+    .balign 128
+    b .
+
+    // 0x500: FIQ from lower EL using AArch64
+    .balign 128
+    b .
+
+    // 0x580: SError from lower EL using AArch64
+    .balign 128
+    b .
+
+    // 0x600: Synchronous from lower EL using AArch32 (EL0 32-bit)
+    .balign 128
+    b .
+
+    // 0x680: IRQ from lower EL using AArch32
+    .balign 128
+    b .
+
+    // 0x700: FIQ from lower EL using AArch32
+    .balign 128
+    b .
+
+    // 0x780: SError from lower EL using AArch32
+    .balign 128
+    b .
+
+    .size __vectors_el1, . - __vectors_el1
+
     .section .text
     .global el1h_irq
     .align 4
     .type el1h_irq, %function
 el1h_irq:
     // Interrupts are disabled when we enter here and we keep
-    // them disable for the whole handler duration.
+    // them disabled for the whole handler duration.
     //
     // Basically this means no nested interrupts.
 
