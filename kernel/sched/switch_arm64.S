@@ -13,6 +13,9 @@ __sched_switch:
     // interrupts while switching is in progress otherwise
     // we could clobber the switching state.
 
+    // Step 0: skip saving if x0 is zero
+    cbz x0, 1f
+
     // Step 1: save current thread state to prev->sp.
     //
     // 1.1. save GPRs (x19–x30) individually.
@@ -96,6 +99,7 @@ __sched_switch:
     // 1. the next value is in x1
     //
     // 2. next->sp is the first entry in prev
+1:
     ldr x2, [x1]
     mov sp, x2
 

@@ -52,7 +52,7 @@ void __kernel_main(void) {
 	printk("started goodbye thread: %d\n", tid);
 
 	// 5. run the thread scheduler
-	sched_thread_yield();
+	sched_thread_run();
 }
 
 // This is the main assembly entry point of the kernel

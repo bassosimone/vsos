@@ -87,13 +87,12 @@ int64_t sched_thread_start(sched_thread_main_t *main, void *opaque, uint64_t fla
 	return rv;
 }
 
-// This is the main function of the idle thread. We stop until an interrupt
-// occurs in __sched_idle and, when we resume, we schedule again.
-static void __idle_main(void *unused) {
+// Loop forever yielding the CPU and then awaiting for interrupts.
+[[noreturn]] static void __idle_main(void *unused) {
 	(void)unused;
 	for (;;) {
-		__sched_idle();
 		sched_thread_yield();
+		__sched_idle();
 	}
 }
 
@@ -115,21 +114,31 @@ static void __unlock_and_switch_to(struct sched_thread *next) {
 	__sched_switch(prev, next);
 }
 
+[[noreturn]] void sched_thread_run(void) {
+	// Manually instantiate the idle thread
+	int64_t rv = sched_thread_start(__idle_main, /* opaque */ 0, /* flags */ 0);
+	KERNEL_ASSERT(rv >= 0);
+
+	// Ensure the idle thread is accessible
+	idle_thread = &threads[rv];
+
+	// Manually set it as the currently running thread
+	current = idle_thread;
+
+	// Manually switch to its execution context
+	__sched_switch(0, idle_thread);
+	panic("unreachable");
+}
+
 void sched_thread_yield(void) {
 	// 1. Acquire the spinlock to prevent anyone else with messing with threads.
 	spinlock_acquire(&lock);
 
-	// 2. If there is no idle thread, initialize it.
-	if (idle_thread == 0) {
-		int64_t rv = __sched_thread_start_locked(__idle_main, /* opaque */ 0, /* flags */ 0);
-		KERNEL_ASSERT(rv >= 0);
-		idle_thread = &threads[rv];
-	}
+	// 2. ensure we have a idle thread
+	KERNEL_ASSERT(idle_thread != 0);
 
-	// 3. if current is not set, point it to the idle thread
-	if (current == 0) {
-		current = idle_thread;
-	}
+	// 3. ensure we have a current thread
+	KERNEL_ASSERT(current != 0);
 
 	// 4. Switch to a runnable thread using a ~fair round-robin scheduling.
 	for (size_t idx = 0; idx < SCHED_MAX_THREADS; idx++) {

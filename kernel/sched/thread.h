@@ -88,4 +88,10 @@ void __sched_trampoline(void);
 // first execution of the thread resumes at __sched_trampoline.
 void __sched_thread_stack_init(struct sched_thread *thread);
 
+// Run the scheduler either switching to runnable threads or waiting for interrupts.
+//
+// This function must be called once at the end of the boot and assumes that
+// no one has run other threads or called sched_thread_yield.
+[[noreturn]] void sched_thread_run(void);
+
 #endif // KERNEL_SCHED_THREAD_H
