@@ -277,3 +277,14 @@ void sched_thread_resume_all(uint64_t channels) {
 	events |= channels;
 	spinlock_release(&lock);
 }
+
+void __sched_thread_sleep(uint64_t jiffies) {
+	uint64_t start = sched_jiffies(__ATOMIC_RELAXED);
+	for (;;) {
+		sched_thread_suspend(SCHED_THREAD_WAIT_TIMER);
+		uint64_t current = sched_jiffies(__ATOMIC_RELAXED);
+		if (current - start >= jiffies) {
+			return;
+		}
+	}
+}

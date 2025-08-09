@@ -39,9 +39,7 @@ static void thread_goodbye(void *opaque) {
 [[noreturn]] static void _sleeper(void *opaque) {
 	(void)opaque;
 	for (;;) {
-		for (size_t idx = 0; idx < HZ; idx++) {
-			sched_thread_suspend(SCHED_THREAD_WAIT_TIMER);
-		}
+		sched_thread_millisleep(750);
 		printk("Hello!\n");
 	}
 }

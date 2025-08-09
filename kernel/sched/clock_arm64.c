@@ -10,6 +10,9 @@
 // Flag indicating we should reschedule
 static uint64_t need_sched = 0;
 
+// Number of ticks since the system has booted.
+static volatile uint64_t jiffies = 0;
+
 // Returns the number of ticks per second used by the hardware.
 static inline uint64_t mrs_cntfrq_el0(void) {
 	uint64_t v;
@@ -51,6 +54,7 @@ void __sched_clock_init(void) {
 }
 
 void sched_clock_irq(void) {
+	__atomic_fetch_add(&jiffies, 1, __ATOMIC_RELEASE);
 	sched_thread_resume_all(SCHED_THREAD_WAIT_TIMER);
 	__sched_clock_rearm();
 	__atomic_store_n(&need_sched, 1, __ATOMIC_RELEASE);
@@ -58,4 +62,8 @@ void sched_clock_irq(void) {
 
 bool sched_should_reschedule(void) {
 	return __atomic_exchange_n(&need_sched, 0, __ATOMIC_ACQUIRE) != 0;
+}
+
+uint64_t sched_jiffies(int memoryorder) {
+	return __atomic_load_n(&jiffies, memoryorder);
 }

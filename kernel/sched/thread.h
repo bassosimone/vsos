@@ -181,4 +181,30 @@ void sched_thread_suspend(uint64_t channels);
 // This function is safe to call from interrupt context.
 void sched_thread_resume_all(uint64_t channels);
 
+// Put the given thread to sleep for the given amount of jiffies.
+//
+// Safe to call whenever you can call sched_thread_suspend.
+void __sched_thread_sleep(uint64_t jiffies);
+
+// Put the current thread to sleep for the given amount of nanoseconds.
+//
+// Safe to call whenever you can call sched_thread_suspend.
+static inline void sched_thread_nanosleep(uint64_t nanosec) {
+	return __sched_thread_sleep((nanosec * HZ) / (1000 * 1000 * 1000));
+}
+
+// Put the current thread to sleep for the given amount of milliseconds.
+//
+// Safe to call whenever you can call sched_thread_suspend.
+static inline void sched_thread_millisleep(uint64_t millisec) {
+	return __sched_thread_sleep((millisec * HZ) / 1000);
+}
+
+// Put the current thread to sleep for the given amount of seconds.
+//
+// Safe to call whenever you can call sched_thread_suspend.
+static inline void sched_thread_sleep(uint64_t sec) {
+	return __sched_thread_sleep(sec * HZ);
+}
+
 #endif // KERNEL_SCHED_THREAD_H
