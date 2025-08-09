@@ -171,6 +171,9 @@ static uint64_t kernel_root_table;
 // GIC Distributor (64 KiB)
 #define VIRT_GICD_BASE 0x08000000ULL
 
+// GIC CPU interface
+#define VIRT_GICC_BASE 0x08010000ULL
+
 // GIC Redistributors (at least 1 frame)
 #define VIRT_GICR_BASE 0x080A0000ULL
 
@@ -203,6 +206,9 @@ void mm_init(void) {
 	mm_flags_t devflags = MM_FLAG_DEVICE | MM_FLAG_WRITE;
 	printk("mm: mapping VIRT_GICD_BASE\n");
 	mm_map_identity(kernel_root_table, VIRT_GICD_BASE, VIRT_GICD_BASE + 0x10000ULL, devflags);
+
+	printk("mm: mapping VIRT_GICC_BASE\n");
+	mm_map_identity(kernel_root_table, VIRT_GICC_BASE, VIRT_GICC_BASE + 0x2000ULL, devflags);
 
 	printk("mm: mapping VIRT_GICR_BASE\n");
 	mm_map_identity(kernel_root_table, VIRT_GICR_BASE, VIRT_GICR_BASE + 0x20000ULL, devflags);

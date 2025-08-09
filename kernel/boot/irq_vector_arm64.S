@@ -2,7 +2,7 @@
     // Purpose: complete AArch64 EL1 vector table with assembly handlers
     // SPDX-License-Identifier: MIT
 
-    .section .vectors, "ax", %progbits
+    .section .text.vectors, "ax", %progbits
     .align 11                        // 2KB alignment for VBAR_EL1
     .global __vectors_el1
     .type   __vectors_el1, %function
