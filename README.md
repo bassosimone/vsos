@@ -8,19 +8,19 @@ https://github.com/nuta/operating-system-in-1000-lines).
 
 On Ubuntu 25.04, we need these dependencies to compile the kernel:
 
-``` bash
+```bash
 sudo apt install build-essential clang clangd lld llvm
 ```
 
 ## Building
 
-``` bash
+```bash
 ninja
 ```
 
 ## Testing
 
-``` bash
+```bash
 qemu-system-aarch64 \
   -M virt \
   -cpu cortex-a53 \
@@ -29,3 +29,9 @@ qemu-system-aarch64 \
 ```
 
 Add `-d in_asm,cpu,int,guest_errors -D qemu.log` to investigate errors.
+
+## Dumping 
+
+```bash
+llvm-objdump -d --no-show-raw-insn -M no-aliases kernel.elf
+```
