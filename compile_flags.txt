@@ -4,3 +4,4 @@
 -std=c23
 -Wall
 -Wextra
+-Wmissing-prototypes

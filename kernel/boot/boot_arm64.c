@@ -9,8 +9,7 @@
 #include <kernel/core/panic.h>	   // for panic
 #include <kernel/core/printk.h>	   // for printk
 #include <kernel/mm/vmap.h>	   // mm_init
-#include <kernel/sched/clock.h>	   // for sched_clock_init
-#include <kernel/sched/thread.h>   // for sched_thread_run
+#include <kernel/sched/sched.h>	   // whole subsystem API
 #include <kernel/sys/param.h>	   // for HZ
 #include <kernel/sys/types.h>	   // for size_t
 #include <kernel/tty/uart.h>	   // for uart_init

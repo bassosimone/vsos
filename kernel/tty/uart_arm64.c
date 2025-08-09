@@ -4,7 +4,7 @@
 // Adapted from: https://github.com/nuta/operating-system-in-1000-lines
 
 #include <kernel/asm/arm64.h>
-#include <kernel/sched/thread.h>
+#include <kernel/sched/sched.h>
 #include <kernel/sys/errno.h>
 #include <kernel/tty/uart.h>
 

@@ -1,11 +1,10 @@
 // File: kernel/sched/clock_arm64.c
-// Purpose: ARM64 implementation of clock.h
+// Purpose: ARM64 system clock management
 // SPDX-License-Identifier: MIT
 
-#include <kernel/asm/arm64.h>	 // for dsb_sy, etc.
-#include <kernel/sched/clock.h>	 // for sched_clock_init, etc.
-#include <kernel/sched/thread.h> // for sched_thread_resume_all
-#include <kernel/sys/param.h>	 // for HZ
+#include <kernel/asm/arm64.h>	// for dsb_sy, etc.
+#include <kernel/sched/sched.h> // subsystem API
+#include <kernel/sys/param.h>	// for HZ
 
 // Flag indicating we should reschedule
 static uint64_t need_sched = 0;
@@ -43,7 +42,7 @@ void sched_clock_irq(void) {
 	__atomic_store_n(&need_sched, 1, __ATOMIC_RELEASE);
 }
 
-bool sched_should_reschedule(void) {
+bool __sched_should_reschedule(void) {
 	return __atomic_exchange_n(&need_sched, 0, __ATOMIC_ACQUIRE) != 0;
 }
 

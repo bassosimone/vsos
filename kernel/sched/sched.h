@@ -1,80 +1,60 @@
-// File: kernel/sched/thread.h
-// Purpose: kernel and user thread scheduler
+// File: kernel/sched/sched.h
+// Purpose: Public and protected scheduler API
 // SPDX-License-Identifier: MIT
-#ifndef KERNEL_SCHED_THREAD_H
-#define KERNEL_SCHED_THREAD_H
+#ifndef KERNEL_SCHED_SCHED_H
+#define KERNEL_SCHED_SCHED_H
 
-#include <kernel/mm/types.h>
-#include <kernel/sys/types.h>
+#include <kernel/sys/param.h> // for HZ
+#include <kernel/sys/types.h> // for uint64_t
 
-// The scheduler is not using this thread slot.
-#define SCHED_THREAD_STATE_UNUSED 0
+// Interrupt handler for the scheduler clock.
+//
+// Called from the generic IRQ handler.
+//
+// Will must acknowledge the IRQ, re-arm the timer, and
+// perform all the related scheduler bookkeping.
+void sched_clock_irq(void);
 
-// The thread is currently runnable by the scheduler.
-#define SCHED_THREAD_STATE_RUNNABLE 1
+// Initialize the timer to interrupt every HZ.
+//
+// Called by the scheduler internals.
+//
+// Do not use outside of this subsystem.
+void __sched_clock_init(void);
 
-// The thread has explicitly stopped running.
-#define SCHED_THREAD_STATE_EXITED 2
+// Returns true if we should trigger a reschedule.
+//
+// Called by the scheduler internals.
+//
+// Do not use outside of this subsystem.
+bool __sched_should_reschedule(void);
 
-// The thread is blocked waiting for a specific event to happen.
-#define SCHED_THREAD_STATE_BLOCKED 3
-
-// The size in bytes of the statically-allocated stack.
-#define SCHED_THREAD_STACK_SIZE 8192
+// Returns the current value of the scheduler jiffies.
+//
+// The jiffies count the number of clock interrupts.
+//
+// The `memoryorder` argument specifies the atomic memory
+// order for accessing the underlying variable.
+//
+// From normal kernel thread context `__ATOMIC_RELAXED`
+// is sufficient. From IRQ or SMP contexts, instead, one
+// should use the `__ATOMIC_ACQUIRE` constraint.
+uint64_t sched_jiffies(int memoryorder);
 
 // The thread can be joined and must not be automatically reaped.
 #define SCHED_THREAD_FLAG_JOINABLE (1 << 0)
 
-// The thread is waiting for the UART to become readable.
-#define SCHED_THREAD_WAIT_UART_READABLE (1 << 0)
-
-// The thread is waiting for the UART to become writable.
-#define SCHED_THREAD_WAIT_UART_WRITABLE (1 << 1)
-
-// The thread is waiting on a timeer to expire.
-#define SCHED_THREAD_WAIT_TIMER (1 << 2)
-
-// The type of a thread's main function.
+// The type of the main function implementing a kernel thread.
 typedef void(sched_thread_main_t)(void *opaque);
-
-// A schedulable thread of execution.
-struct sched_thread {
-	// The thread stack pointer.
-	uintptr_t sp;
-
-	// The statically-allocated aligned stack.
-	alignas(16) uint8_t stack[SCHED_THREAD_STACK_SIZE];
-
-	// The thread ID.
-	uint64_t id;
-
-	// The thread state (one of SCHED_THREAD_STATE_xxx constants).
-	uint64_t state;
-
-	// The thread return value after it has exited.
-	void *retval;
-
-	// The main thread func.
-	sched_thread_main_t *main;
-
-	// The func argument.
-	void *opaque;
-
-	// Flags modifying the thread behavior (see SCHED_THREAD_FLAG_xxx).
-	uint64_t flags;
-
-	// The raw trap frame pointer, which points inside the stack.
-	uintptr_t trapframe;
-
-	// The thing the thread is blocked by.
-	uint64_t blockedby;
-};
 
 // Starts a thread with the given main function and the given flags.
 //
-// When the flags are zero, the thread is detached.
+// When `main` returns, the thread terminates.
 //
-// We recommend transferring ownership of the opaque pointer to the thread.
+// You SHOULD transfer ownership of `opaque` to the thread.
+//
+// The zero flags create a detached thread. The SCHED_THREAD_FLAG_JOINABLE flag
+// creates a thread that you must explicitly join.
 //
 // Returns a negative errno value or the thread ID (>= 0).
 int64_t sched_thread_start(sched_thread_main_t *main, void *opaque, uint64_t flags);
@@ -85,47 +65,80 @@ int64_t sched_thread_start(sched_thread_main_t *main, void *opaque, uint64_t fla
 // so that the clock interrupt does not race with it.
 //
 // Returns when this thread becomes runnable again.
+//
+// If the thread exits, this function will never return.
 void sched_thread_yield(void);
 
-// Internal implementation of yielding with interrupts being disabled.
+// Like sched_thread_yield but without disabling interrupts.
 //
-// Do not call this outside of this module. The sched_thread_yield
-// implementation is MD and disables interrupts before deferring to
-// this function, which is MI, and does the context switch.
-void __sched_thread_yield_without_interrupts(void);
+// Called by the scheduler internals.
+//
+// Do not use outside of this subsystem.
+void __sched_thread_yield(void);
 
 // Terminates the thread execution and sets the return value.
 //
-// This function never returns.
+// The `retval` memory ownership is transferred from the thread to
+// whoever will join it and read the return value.
+//
+// This function never returns, rather it is a cooperative
+// scheduling point that schedules a new thread.
 [[noreturn]] void sched_thread_exit(void *retval);
+
+// Opaque representation of a kernel thread.
+struct sched_thread;
 
 // Machine-dependent context-switch implementation.
 //
-// The TL;DR is that we use the stack to store the prev context and then we
-// load the new thread context from the stack and switch to it.
+// "You are not expected to understand this".
+//
+// Called by the scheduler internals.
+//
+// Do not use outside of this subsystem.
 void __sched_switch(struct sched_thread *prev, struct sched_thread *next);
 
-// Machine-dependent implementation of going idle for a while. Typically
-// this should call `wfi` to save power until there's an interrupt.
+// Put the CPU in low-power mode until an interrupt occurs.
+//
+// Called by the scheduler internals.
+//
+// Do not use outside of this subsystem.
 void __sched_idle(void);
 
-// Internal trampoline used to ensure we always call sched_thread_exit.
+// Trampoline for starting a new kernel thread.
+//
+// Called by the scheduler internals.
+//
+// Do not use outside of this subsystem.
 void __sched_trampoline(void);
 
-// Machine-dependent code that sets the thread stack up such that the
-// first execution of the thread resumes at __sched_trampoline.
-void __sched_thread_stack_init(struct sched_thread *thread);
-
-// Run the scheduler either switching to runnable threads or waiting for interrupts.
+// Setup a kernel thread stack that resumes at __sched_trampoline.
 //
-// This function must be called once at the end of the boot and assumes that
-// no one has run any other threads or called sched_thread_yield.
+// Called by the scheduler internals.
+//
+// Do not use outside of this subsystem.
+uintptr_t __sched_build_switch_frame(uintptr_t sp);
+
+// Switch to the first runnable thread and never return.
+//
+// The control will constantly switch between runnable threads.
+//
+// Called by the late boot process.
+//
+// Make sure this function is called just once.
 [[noreturn]] void sched_thread_run(void);
 
-// Code that returns to userspace possibly context switching current.
+// Return to userspace possibly switching to another process.
 //
-// This function is called while finishing to handle a system call
-// and interrupts are disabled at that moment in time.
+// Called right before returning to userspace, typically by
+// the IRQ-from-userspace or syscall ASM handling code.
+//
+// The frame argument points to the (machine-dependent)
+// complete trap frame necessary to swap context.
+//
+// This function never returns. Rather it saves the current
+// trapframe, loads the trapframe of a thread previously
+// suspended by returning to userspace, and issues a return
+// from userspace from such a context.
 [[noreturn]] void sched_return_to_user(uintptr_t raw_frame);
 
 // Call this function from kernel threads to ensure that the scheduler
@@ -160,6 +173,15 @@ void __sched_thread_stack_init(struct sched_thread *thread);
 // as cooperative synchronization points.
 void sched_thread_maybe_yield(void);
 
+// The thread is waiting for the UART to become readable.
+#define SCHED_THREAD_WAIT_UART_READABLE (1 << 0)
+
+// The thread is waiting for the UART to become writable.
+#define SCHED_THREAD_WAIT_UART_WRITABLE (1 << 1)
+
+// The thread is waiting on a timeer to expire.
+#define SCHED_THREAD_WAIT_TIMER (1 << 2)
+
 // This function suspends the current thread until one of the
 // given channels (e.g., SCHED_THREAD_WAIT_UART_READABLE) becomes
 // available. Channels are a bitmask of possible event sources.
@@ -178,7 +200,7 @@ void sched_thread_suspend(uint64_t channels);
 // condition it was blocked on was satisfied or not. If not, the
 // thread should suspend itself again.
 //
-// This function is safe to call from interrupt context.
+// This function is typically called from interrupt context.
 void sched_thread_resume_all(uint64_t channels);
 
 // Put the given thread to sleep for the given amount of jiffies.
@@ -207,4 +229,4 @@ static inline void sched_thread_sleep(uint64_t sec) {
 	return __sched_thread_sleep(sec * HZ);
 }
 
-#endif // KERNEL_SCHED_THREAD_H
+#endif // KERNEL_SCHED_SCHED_H

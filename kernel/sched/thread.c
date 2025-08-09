@@ -1,20 +1,63 @@
 // File: kernel/sched/thread.c
-// Purpose: kernel and user thread scheduler
+// Purpose: kernel thread scheduler
 // SPDX-License-Identifier: MIT
-
-// TODO(bassosimone): maybe consider moving more assembly code
-// related to context switching into the scheduler. After all, it
-// seems scheduler code more than boot code.
 
 #include <kernel/boot/irq.h>	  // for irq_restore_user_and_eret
 #include <kernel/core/assert.h>	  // for KERNEL_ASSERT
 #include <kernel/core/panic.h>	  // for panic
 #include <kernel/core/spinlock.h> // for struct spinlock
-#include <kernel/sched/clock.h>	  // for __sched_clock_init
-#include <kernel/sched/thread.h>  // for sched_thread, etc.
+#include <kernel/sched/sched.h>	  // system's API
 #include <kernel/sys/errno.h>	  // for EAGAIN
 #include <kernel/sys/param.h>	  // for SCHED_MAX_THREADS
 #include <libc/string/string.h>	  // for memset
+
+// The scheduler is not using this thread slot.
+#define SCHED_THREAD_STATE_UNUSED 0
+
+// The thread is currently runnable by the scheduler.
+#define SCHED_THREAD_STATE_RUNNABLE 1
+
+// The thread has explicitly stopped running.
+#define SCHED_THREAD_STATE_EXITED 2
+
+// The thread is blocked waiting for a specific event to happen.
+#define SCHED_THREAD_STATE_BLOCKED 3
+
+// The size in bytes of the statically-allocated stack.
+#define SCHED_THREAD_STACK_SIZE 8192
+
+// A schedulable thread of execution.
+struct sched_thread {
+	// The thread stack pointer.
+	uintptr_t sp;
+
+	// The statically-allocated aligned stack.
+	alignas(16) uint8_t stack[SCHED_THREAD_STACK_SIZE];
+
+	// The thread ID.
+	uint64_t id;
+
+	// The thread state (one of SCHED_THREAD_STATE_xxx constants).
+	uint64_t state;
+
+	// The thread return value after it has exited.
+	void *retval;
+
+	// The main thread func.
+	sched_thread_main_t *main;
+
+	// The func argument.
+	void *opaque;
+
+	// Flags modifying the thread behavior (see SCHED_THREAD_FLAG_xxx).
+	uint64_t flags;
+
+	// The raw trap frame pointer, which points inside the stack.
+	uintptr_t trapframe;
+
+	// The thing the thread is blocked by.
+	uint64_t blockedby;
+};
 
 // Statically allocated list of threads.
 static struct sched_thread threads[SCHED_MAX_THREADS];
@@ -41,6 +84,17 @@ static uint64_t events = 0;
 void __sched_trampoline(void) {
 	current->main(current->opaque);
 	sched_thread_exit(0);
+}
+
+static inline void __sched_thread_stack_init(struct sched_thread *thread) {
+	// See the stack as a uint8 aligned array
+	uintptr_t sp = (uintptr_t)&thread->stack[SCHED_THREAD_STACK_SIZE];
+
+	// Ensure the stack is 16 byte aligned
+	KERNEL_ASSERT((sp & 0xF) == 0);
+
+	// Use assembly magic to create the switch frame
+	thread->sp = __sched_build_switch_frame(sp);
 }
 
 // Assumption: the caller has acquired the spinlock
@@ -195,7 +249,7 @@ static struct sched_thread *select_runnable(void) {
 	return idle_thread;
 }
 
-void __sched_thread_yield_without_interrupts(void) {
+void __sched_thread_yield(void) {
 	// 1. Acquire the spinlock to prevent anyone else with messing with threads.
 	spinlock_acquire(&lock);
 
@@ -240,8 +294,8 @@ void __sched_thread_yield_without_interrupts(void) {
 	current->trapframe = raw_frame;
 
 	// Check whether we should reschedule and switch if it's needed
-	if (sched_should_reschedule()) {
-		__sched_thread_yield_without_interrupts();
+	if (__sched_should_reschedule()) {
+		__sched_thread_yield();
 	}
 
 	// Ensure we still have current
@@ -260,7 +314,7 @@ void __sched_thread_yield_without_interrupts(void) {
 }
 
 void sched_thread_maybe_yield(void) {
-	if (sched_should_reschedule()) {
+	if (__sched_should_reschedule()) {
 		sched_thread_yield();
 	}
 }

@@ -5,7 +5,7 @@
 #include "kernel/boot/irq_arm64.h"
 #include <kernel/asm/arm64.h>	// for dsb_sy, etc.
 #include <kernel/core/printk.h> // for printk.
-#include <kernel/sched/clock.h> // for sched_clock_irq
+#include <kernel/sched/sched.h> // for sched_clock_irq
 
 // The vectors defined in irq_vector_arm64.S
 extern char __vectors_el1[];
