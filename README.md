@@ -14,6 +14,7 @@ https://github.com/nuta/operating-system-in-1000-lines).
 - [x] cooperative multitasking (arm64)
 - [x] system-timer driver (arm64)
 - [x] virtual memory at EL1 context (arm64)
+- [x] interruptible process sleep (arm64)
 - [ ] `SYS_read` (arm64) - IN PROGRESS
 - [ ] `SYS_write` (arm64) - IN PROGRESS
 - [ ] initial shell (arm64) - IN PROGRESS
