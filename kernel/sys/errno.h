@@ -17,6 +17,9 @@
 // Operation would block.
 #define EWOULDBLOCK EAGAIN
 
+// Invalid argument.
+#define EINVAL 22
+
 // Function not implemented.
 #define ENOSYS 38
 

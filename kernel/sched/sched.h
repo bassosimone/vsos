@@ -85,6 +85,23 @@ void __sched_thread_yield(void);
 // scheduling point that schedules a new thread.
 [[noreturn]] void sched_thread_exit(void *retval);
 
+// Waits for the given thread to terminate.
+//
+// Fails immediately returning `-EINVAL` if the given thread ID is
+// invalid or the thread is actually not joinable.
+//
+// In all other cases, the current thread is suspended until the
+// thread with the given ID calls sched_pthread_exit.
+//
+// When the current thread resumes, it collects the retval, of which
+// it takes memory ownership, and the other thread is reaped, while
+// sched_thread_join returns `0` to its caller.
+//
+// When the other thread has already terminated, this function may
+// potentially sleep awaiting for the notification depending on what
+// happens inside the scheduler and within the IRQs.
+int64_t sched_thread_join(int64_t tid, void **retvalptr);
+
 // Opaque representation of a kernel thread.
 struct sched_thread;
 
@@ -181,6 +198,13 @@ void sched_thread_maybe_yield(void);
 
 // The thread is waiting on a timeer to expire.
 #define SCHED_THREAD_WAIT_TIMER (1 << 2)
+
+// The thread is waiting on another thread to terminate.
+//
+// Used by the scheduler internals.
+//
+// Do not use outside of this subsystem.
+#define __SCHED_THREAD_WAIT_THREAD (1 << 3)
 
 // This function suspends the current thread until one of the
 // given channels (e.g., SCHED_THREAD_WAIT_UART_READABLE) becomes

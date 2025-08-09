@@ -57,6 +57,9 @@ struct sched_thread {
 
 	// The thing the thread is blocked by.
 	uint64_t blockedby;
+
+	// The epoch when the thread was created.
+	uint64_t epoch;
 };
 
 // Statically allocated list of threads.
@@ -138,7 +141,10 @@ static int64_t __sched_thread_start_locked(sched_thread_main_t *main, void *opaq
 	// 9. copy the flags.
 	candidate->flags = flags;
 
-	// 10. return the thread ID.
+	// 10. set the thread's epoch
+	candidate->epoch = sched_jiffies(__ATOMIC_RELAXED);
+
+	// 11. return the thread ID.
 	return candidate->id;
 }
 
@@ -271,19 +277,88 @@ void __sched_thread_yield(void) {
 	// 1. ensure no-one can modify the threads state
 	spinlock_acquire(&lock);
 
-	// 2. set the return value and mark the thread as exited
-	bool needsjoin = (current->flags & SCHED_THREAD_FLAG_JOINABLE) != 0;
+	// 2. set the return value
 	current->retval = retval;
-	current->state = needsjoin ? SCHED_THREAD_STATE_EXITED : SCHED_THREAD_STATE_UNUSED;
 
-	// 3. allow others to access the thread
+	// 3. mark the thread as zombie or exited
+	if ((current->flags & SCHED_THREAD_FLAG_JOINABLE) != 0) {
+		current->state = SCHED_THREAD_STATE_EXITED;
+		events |= __SCHED_THREAD_WAIT_THREAD; // publish announcement
+	} else {
+		current->state = SCHED_THREAD_STATE_UNUSED;
+	}
+
+	// 4. allow others to access the thread
 	spinlock_release(&lock);
 
-	// 4. transfer the control to another thread
+	// 5. transfer the control to another thread
 	sched_thread_yield();
 
-	// 5. ensure that we don't arrive here
+	// 6. ensure that we don't arrive here
 	panic("thread resumed execution after terminating");
+}
+
+int64_t sched_thread_join(int64_t tid, void **retvalptr) {
+	KERNEL_ASSERT(current != 0);
+
+	// Just avoid wasting time with out of bound thread IDs
+	if (tid < 0 || tid >= SCHED_MAX_THREADS) {
+		return -EINVAL;
+	}
+
+	// OK, let's bite the spinlock
+	spinlock_acquire(&lock);
+
+	uint64_t oepoch = 0;
+	for (;;) {
+
+		// Do not assume the thread state is stable
+		// for example pthread_detach(self) can cause
+		// a thread that was awaitable to vanish
+		struct sched_thread *other = &threads[tid];
+		bool isjoinable = (other->flags & SCHED_THREAD_FLAG_JOINABLE) != 0;
+		oepoch = (oepoch == 0) ? other->epoch : oepoch;
+		switch (other->state) {
+
+		// Continue waiting for a blocked/running awaitable thread
+		case SCHED_THREAD_STATE_BLOCKED:
+		case SCHED_THREAD_STATE_RUNNABLE:
+			if (!isjoinable) {
+				spinlock_release(&lock);
+				return -EINVAL;
+			}
+
+			// Await for *any* thread to terminate.
+			//
+			// Yeah, it does not scale well, but we need to start
+			// from something simple don't we?
+			spinlock_release(&lock);
+			sched_thread_suspend(__SCHED_THREAD_WAIT_THREAD);
+			spinlock_acquire(&lock);
+
+			// Detect *sad* cases in which we have slept so much or
+			// there was reaping contention and the actual thread
+			// we were tracking already sleeps with the fishes
+			if (oepoch != other->epoch) {
+				spinlock_release(&lock);
+				return -EINVAL;
+			}
+			continue;
+
+		// OK, this is the case where we have fun
+		case SCHED_THREAD_STATE_EXITED:
+			KERNEL_ASSERT(isjoinable);		  // must be the case
+			*retvalptr = other->retval;		  // transfer ownership
+			other->state = SCHED_THREAD_STATE_UNUSED; // make a short funeral
+			spinlock_release(&lock);
+			return 0;
+
+		// Maybe it detached itself and exited WTF
+		default:
+			spinlock_release(&lock);
+			return -EINVAL;
+		}
+	}
 }
 
 [[noreturn]] void sched_return_to_user(uintptr_t raw_frame) {
