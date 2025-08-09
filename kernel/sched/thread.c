@@ -242,3 +242,9 @@ void __sched_thread_yield_without_interrupts(void) {
 	// Just make sure we don't arrive here
 	__builtin_unreachable();
 }
+
+void sched_thread_maybe_yield(void) {
+	if (sched_should_reschedule()) {
+		sched_thread_yield();
+	}
+}

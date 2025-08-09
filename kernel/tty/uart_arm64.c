@@ -4,6 +4,7 @@
 // Adapted from: https://github.com/nuta/operating-system-in-1000-lines
 
 #include <kernel/asm/arm64.h>
+#include <kernel/sched/thread.h>
 #include <kernel/sys/errno.h>
 #include <kernel/tty/uart.h>
 
@@ -56,6 +57,7 @@ void uart_init(void) {
 }
 
 int16_t uart_try_read(void) {
+	sched_thread_maybe_yield();
 	if (!uart_readable()) {
 		return -EAGAIN;
 	}
@@ -68,6 +70,11 @@ bool uart_readable(void) {
 }
 
 int16_t uart_try_write(uint8_t ch) {
+	sched_thread_maybe_yield();
+	return __uart_try_write(ch);
+}
+
+int64_t __uart_try_write(uint8_t ch) {
 	if (!uart_writable()) {
 		return -EAGAIN;
 	}

@@ -12,6 +12,9 @@ void uart_init(void);
 
 // Attempts to read a character from the UART device.
 //
+// This function is a cooperative synchronization point. The code will
+// possibly yield the CPU if we need rescheduling.
+//
 // Returns either the read character or a negative errno value.
 int16_t uart_try_read(void);
 
@@ -20,8 +23,16 @@ bool uart_readable(void);
 
 // Attempts to write the given character to the UART device.
 //
+// This function is a cooperative synchronization point. The code will
+// possibly yield the CPU if we need rescheduling.
+//
 // Returns 0 or a negative errno value.
 int16_t uart_try_write(uint8_t ch);
+
+// Like uart_try_write but without the cooperative synchronization
+// point. We MUST use this function inside printk since printk
+// MUST NOT be preempted (otherwise we get nonsense output).
+int64_t __uart_try_write(uint8_t ch);
 
 // Returns true when the device is writable.
 bool uart_writable(void);

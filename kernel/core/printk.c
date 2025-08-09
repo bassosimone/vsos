@@ -13,9 +13,10 @@
 // seems to be an implementation detail of printk.
 static inline int16_t uart_putchar(uint8_t ch) {
 	while (!uart_writable()) {
-		// TODO(bassosimone): should we yield here?
+		// Note: we MUST NOT yield here because otherwise the
+		// overall output of printk becomes garbage.
 	}
-	int16_t rv = uart_try_write(ch);
+	int16_t rv = __uart_try_write(ch);
 	// Note: we cannot `KERNEL_ASSERT(rv == 0)` here since this function is called by panic
 	return rv;
 }

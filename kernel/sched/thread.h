@@ -113,4 +113,36 @@ void __sched_thread_stack_init(struct sched_thread *thread);
 // and interrupts are disabled at that moment in time.
 [[noreturn]] void sched_return_to_user(uintptr_t raw_frame);
 
+// Call this function from kernel threads to ensure that the scheduler
+// has a chance to schedule another process when needed.
+//
+// The general idea is that the clock ticker sets an atomic flag
+// indicating the need to reschedule and device interrupt handlers
+// may also set the same or similar flags indicating that someone
+// needs to wakeup to perform some action. However, especially when
+// servicing interrupts at kernel level, it is not viable to run
+// the scheduler directly. Instead, by sprinkling our kernel threads
+// code with invocations of this function, we naturally provide the
+// ability to change the kernel focus and do other stuff.
+//
+// The rule of thumb of using this function is the following:
+//
+// 1. If the kernel thread function does not loop, invoke this
+// function just once at the very beginning.
+//
+// 2. If the kernel thread function does loop, invoke this
+// function inside the loop itself.
+//
+// The idle thread should not use this function since it runs
+// a loop that blocks on interrupts, so each interrupt will
+// already interrupt it without the need to call this. It should
+// instead invoke sched_thread_yield unconditionally.
+//
+// Interrupt handlers MUST NOT use this function. This function
+// MUST NOT be used inside of critical sections.
+//
+// Functions that call this function should document themselves
+// as cooperative synchronization points.
+void sched_thread_maybe_yield(void);
+
 #endif // KERNEL_SCHED_THREAD_H
