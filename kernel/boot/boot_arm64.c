@@ -8,6 +8,7 @@
 #include <kernel/boot/layout.h>	   // for __stack_top, __bss, __bss_end
 #include <kernel/core/panic.h>	   // for panic
 #include <kernel/core/printk.h>	   // for printk
+#include <kernel/mm/vmap.h>	   // mm_init
 #include <kernel/sched/clock.h>	   // for sched_clock_init
 #include <kernel/sched/thread.h>   // for sched_thread_run
 #include <kernel/sys/types.h>	   // for size_t
@@ -46,17 +47,25 @@ void __kernel_main(void) {
 	printk("initialized uart\n");
 
 	// 3. intialize the GICv2
+	printk("initializing gicv2...\n");
 	gicv2_init();
+	printk("initializing gicv2... ok\n");
 
-	// 4. create a thread for saying hello to the world
+	// 4. initialize the memory manager
+	printk("initializing mm...\n");
+	mm_init();
+	printk("initializing mm... ok\n");
+
+	// 5. create a thread for saying hello to the world
 	int64_t tid = sched_thread_start(thread_hello, /* opaque */ 0, /* flags */ 0);
 	printk("started hello thread: %d\n", tid);
 
-	// 5. create a thread for saying goodbye to the world
+	// 6. create a thread for saying goodbye to the world
 	tid = sched_thread_start(thread_goodbye, /* opaque */ 0, /* flags */ 0);
 	printk("started goodbye thread: %d\n", tid);
 
-	// 6. run the thread scheduler
+	// 7. run the thread scheduler
+	printk("starting thread scheduler...\n");
 	sched_thread_run();
 }
 
