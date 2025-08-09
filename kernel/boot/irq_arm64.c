@@ -10,10 +10,6 @@
 // The vectors defined in irq_vector_arm64.S
 extern char __vectors_el1[];
 
-static inline void msr_vbar_el1(void *base) {
-	__asm__ volatile("msr vbar_el1, %0\n\tisb" ::"r"(base) : "memory");
-}
-
 // We're using GICv2, which should be available in `qemu-system-aarch64 -M virt`.
 #define GICD_BASE 0x08000000ul
 #define GICC_BASE 0x08010000ul
@@ -38,7 +34,7 @@ static inline void msr_vbar_el1(void *base) {
 
 void gicv2_init(void) {
 	// Set the vector interrupt table
-	msr_vbar_el1(__vectors_el1);
+	msr_vbar_el1((uint64_t)__vectors_el1);
 
 	// Mask CPU interface, then enable distributor, then CPU interface
 	GICC_CTLR = 0; // disable CPU IF

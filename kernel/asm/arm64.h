@@ -8,7 +8,7 @@
 
 #include <kernel/sys/types.h>
 
-// DSB: data synchronization barrier.
+// DSB: data synchronization barrier using sy.
 //
 // Similar to Zig's `.SeqCst`.
 //
@@ -109,6 +109,54 @@ static inline void msr_daifset_2(void) {
 // leaving FIQ, SError, and Debug mask bits unchanged.
 static inline void msr_daifclr_2(void) {
 	__asm__ volatile("msr daifclr, #2" ::: "memory");
+}
+
+// DSB: data synchronization barrier using ishst.
+static inline void dsb_ishst(void) {
+	__asm__ volatile("dsb ishst" ::: "memory");
+}
+
+// Write MAIR_EL1
+static inline void msr_mair_el1(uint64_t val) {
+	__asm__ volatile("msr mair_el1, %0" ::"r"(val) : "memory");
+	isb();
+}
+
+// Write TCR_EL1
+static inline void msr_tcr_el1(uint64_t val) {
+	__asm__ volatile("msr tcr_el1, %0" ::"r"(val) : "memory");
+	isb();
+}
+
+// Write TTBR1_EL1
+static inline void msr_ttbr1_el1(uint64_t val) {
+	__asm__ volatile("msr ttbr1_el1, %0" ::"r"(val) : "memory");
+	isb();
+}
+
+// Write TTBR0_EL1
+static inline void msr_ttbr0_el1(uint64_t val) {
+	__asm__ volatile("msr ttbr0_el1, %0" ::"r"(val) : "memory");
+	isb();
+}
+
+// Read SCTLR_EL1
+static inline uint64_t mrs_sctlr_el1(void) {
+	uint64_t v;
+	__asm__ volatile("mrs %0, sctlr_el1" : "=r"(v));
+	return v;
+}
+
+// Write SCTLR_EL1
+static inline void msr_sctlr_el1(uint64_t val) {
+	__asm__ volatile("msr sctlr_el1, %0" ::"r"(val) : "memory");
+	isb();
+}
+
+// Write VBAR_EL1
+static inline void msr_vbar_el1(uint64_t v) {
+	__asm__ volatile("msr vbar_el1, %0" ::"r"(v) : "memory");
+	isb();
 }
 
 #endif // KERNEL_ASM_ARM64
