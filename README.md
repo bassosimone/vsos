@@ -1,7 +1,8 @@
 # MiniOS: Very Small Operating System
 
-This repository contains a really-basic, portable, hobby operating
-system. Part of the codebase is derived from [nuta/operating-system-in-1000-lines](
+This repository contains a really-basic, portable, hobby operating system.
+
+Portions of this code derive from [nuta/operating-system-in-1000-lines](
 https://github.com/nuta/operating-system-in-1000-lines).
 
 ## Roadmap
@@ -12,15 +13,16 @@ https://github.com/nuta/operating-system-in-1000-lines).
 - [x] `printk` (arm64)
 - [x] cooperative multitasking (arm64)
 - [x] system-timer driver (arm64)
-- [x] virtual-memory at EL1 context (arm64)
+- [x] virtual memory at EL1 context (arm64)
 - [ ] `SYS_read` (arm64) - IN PROGRESS
 - [ ] `SYS_write` (arm64) - IN PROGRESS
 - [ ] initial shell (arm64) - IN PROGRESS
 - [ ] ELF loader (arm64) - IN PROGRESS
-- [ ] zygote user process
-- [ ] `O_NONBLOCK` and `SYS_select`
-- [ ] block device driver
-- [ ] file system
+- [ ] virtual memory at EL0 context (arm64)
+- [ ] zygote user process (arm64)
+- [ ] `O_NONBLOCK` and `SYS_select` (arm64)
+- [ ] block device driver (arm64)
+- [ ] file system (arm64)
 
 ## Dependencies
 
