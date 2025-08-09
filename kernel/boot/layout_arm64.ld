@@ -13,26 +13,31 @@ SECTIONS {
 
     /* Code section: contains kernel code, including the `boot()` entry point.
        `KEEP` ensures `.text.boot` is retained even if unreferenced. */
-    .text : {
+    .text : ALIGN(4096) {
         KEEP(*(.text.boot));
         *(.text .text.*);
     }
+    __kernel_end = .;
 
     /* Read-only data section: constants, jump tables, etc.
        16-byte aligned for safety on AArch64 (e.g., 64-bit or vector constants) */
-    .rodata : ALIGN(16) {
+    .rodata : ALIGN(4096) {
+        __rodata_base = .;
         *(.rodata .rodata.*);
+        __rodata_end = .;
     }
 
     /* Initialized data: global variables with initial values
        16-byte aligned for pointer safety on ARM64 */
-    .data : ALIGN(16) {
+    .data : ALIGN(4096) {
+        __data_base = .;
         *(.data .data.*);
+        __data_end = .;
     }
 
     /* Uninitialized data (BSS): zero-filled at runtime in `boot()`.
        Provides __bss and __bss_end for manual zeroing. */
-    .bss : ALIGN(16) {
+    .bss : ALIGN(4096) {
         __bss = .;
         *(.bss .bss.* .sbss .sbss.*);
         __bss_end = .;
@@ -40,7 +45,7 @@ SECTIONS {
 
     /* Stack space: 128 KiB for kernel stack
        __stack_top marks the "top" (lowest address grows downward) */
-    . = ALIGN(16);
+    . = ALIGN(4096);
     __stack_bottom = .;
     . += 128 * 1024;
     __stack_top = .;
