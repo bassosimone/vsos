@@ -159,4 +159,21 @@ static inline void msr_vbar_el1(uint64_t v) {
 	isb();
 }
 
+// Returns the number of ticks per second used by the hardware.
+static inline uint64_t mrs_cntfrq_el0(void) {
+	uint64_t v;
+	__asm__ volatile("mrs %0, cntfrq_el0" : "=r"(v));
+	return v;
+}
+
+// Program the clock to fire after the given amount of time has elapsed.
+static inline void msr_cntp_tval_el0(uint64_t v) {
+	__asm__ volatile("msr cntp_tval_el0, %0" ::"r"(v));
+}
+
+// Enable the clock and unmask its interrupt when v is equal to 1.
+static inline void msr_cntp_ctl_el0(uint64_t v) {
+	__asm__ volatile("msr cntp_ctl_el0, %0" ::"r"(v));
+}
+
 #endif // KERNEL_ASM_ARM64

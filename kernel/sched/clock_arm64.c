@@ -13,23 +13,6 @@ static uint64_t need_sched = 0;
 // Number of ticks since the system has booted.
 static volatile uint64_t jiffies = 0;
 
-// Returns the number of ticks per second used by the hardware.
-static inline uint64_t mrs_cntfrq_el0(void) {
-	uint64_t v;
-	__asm__ volatile("mrs %0, cntfrq_el0" : "=r"(v));
-	return v;
-}
-
-// Program the clock to fire after the given amount of time has elapsed.
-static inline void msr_cntp_tval_el0(uint64_t v) {
-	__asm__ volatile("msr cntp_tval_el0, %0" ::"r"(v));
-}
-
-// Enable the clock and unmask its interrupt when v is equal to 1.
-static inline void msr_cntp_ctl_el0(uint64_t v) {
-	__asm__ volatile("msr cntp_ctl_el0, %0" ::"r"(v));
-}
-
 // Common function invoked both by sched_clock_init and sched_clock_irq
 static void __sched_clock_rearm() {
 	// Get the number of ticks per second used by the hardware.
