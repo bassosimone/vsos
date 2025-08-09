@@ -5,6 +5,7 @@
 #include <kernel/asm/arm64.h>	 // for dsb_sy, etc.
 #include <kernel/sched/clock.h>	 // for sched_clock_init, etc.
 #include <kernel/sched/thread.h> // for sched_thread_resume_all
+#include <kernel/sys/param.h>	 // for HZ
 
 // Flag indicating we should reschedule
 static uint64_t need_sched = 0;
@@ -31,8 +32,8 @@ static void __sched_clock_rearm() {
 	// Get the number of ticks per second used by the hardware.
 	uint64_t freq = mrs_cntfrq_el0();
 
-	// Scale the number to obtain a frequency of 50 Hz.
-	uint64_t ticks_per_int = freq / 50;
+	// Scale the number to obtain a frequency of HZ Hertz.
+	uint64_t ticks_per_int = freq / HZ;
 
 	// Program first expiry relative to now
 	msr_cntp_tval_el0(ticks_per_int);

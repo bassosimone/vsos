@@ -5,6 +5,9 @@
 #ifndef KERNEL_SYS_PARAM_H
 #define KERNEL_SYS_PARAM_H
 
+// Frequency at which the clock scheduler ticks.
+#define HZ 100
+
 // Page size on the amd64 architecture.
 #define MM_PAGE_SIZE 4096UL
 

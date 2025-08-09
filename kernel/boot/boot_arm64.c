@@ -11,6 +11,7 @@
 #include <kernel/mm/vmap.h>	   // mm_init
 #include <kernel/sched/clock.h>	   // for sched_clock_init
 #include <kernel/sched/thread.h>   // for sched_thread_run
+#include <kernel/sys/param.h>	   // for HZ
 #include <kernel/sys/types.h>	   // for size_t
 #include <kernel/tty/uart.h>	   // for uart_init
 #include <libc/string/string.h>	   // for memset
@@ -33,6 +34,16 @@ static void thread_goodbye(void *opaque) {
 	sched_thread_yield();
 	printk("Goodbye, world\n");
 	sched_thread_yield();
+}
+
+[[noreturn]] static void _sleeper(void *opaque) {
+	(void)opaque;
+	for (;;) {
+		for (size_t idx = 0; idx < HZ; idx++) {
+			sched_thread_suspend(SCHED_THREAD_WAIT_TIMER);
+		}
+		printk("Hello!\n");
+	}
 }
 
 void __kernel_main(void) {
@@ -64,7 +75,11 @@ void __kernel_main(void) {
 	tid = sched_thread_start(thread_goodbye, /* opaque */ 0, /* flags */ 0);
 	printk("started goodbye thread: %d\n", tid);
 
-	// 7. run the thread scheduler
+	// 7. create a thread that prints a message every second
+	tid = sched_thread_start(_sleeper, /* opaque */ 0, /* flags */ 0);
+	printk("started sleeper thread: %d\n", tid);
+
+	// 8. run the thread scheduler
 	printk("starting thread scheduler...\n");
 	sched_thread_run();
 }
