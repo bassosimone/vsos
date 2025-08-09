@@ -35,6 +35,9 @@ static struct sched_thread *idle_thread = 0;
 // ID used by the scheduler to try and be fair.
 static size_t fair_id = 0;
 
+// List of pending events since the last schedule occurred.
+static uint64_t events = 0;
+
 void __sched_trampoline(void) {
 	current->main(current->opaque);
 	sched_thread_exit(0);
@@ -147,7 +150,9 @@ static void __unlock_and_switch_to(struct sched_thread *next) {
 	panic("unreachable");
 }
 
-// Function that selects the next thread to run or the idle thread
+// Function that selects the next thread to run or the idle thread.
+//
+// Must be invoked while holding the spinlock.
 static struct sched_thread *select_runnable(void) {
 	// 1. ensure we have a idle thread
 	KERNEL_ASSERT(idle_thread != 0);
@@ -155,23 +160,34 @@ static struct sched_thread *select_runnable(void) {
 	// 2. ensure we have a current thread
 	KERNEL_ASSERT(current != 0);
 
-	// 3. Switch to a runnable thread using a ~fair round-robin scheduling.
+	// 3. grab the list of events and clear it
+	uint64_t channels = events;
+	events = 0;
+
+	// 4. Switch to a runnable thread using a ~fair round-robin scheduling.
 	for (size_t idx = 0; idx < SCHED_MAX_THREADS; idx++) {
-		// 3.1. get the next thread we should consider for running.
+		// 4.1. get the next thread we should consider for running.
 		struct sched_thread *next = &threads[fair_id];
 		fair_id = (fair_id == SCHED_MAX_THREADS - 1) ? 0 : fair_id + 1;
 
-		// 3.2. avoid giving CPU time to the idle thread.
+		// 4.2. avoid giving CPU time to the idle thread.
 		if (next == idle_thread) {
 			continue;
 		}
 
-		// 3.3. skip threads that are not marked as runnable.
+		// 4.3. see whether we need to wakeup this specific thread.
+		if (next->state == SCHED_THREAD_STATE_BLOCKED && (next->blockedby & channels) != 0) {
+			next->state = SCHED_THREAD_STATE_RUNNABLE;
+			next->blockedby = 0;
+			/* FALLTHROUGH */
+		}
+
+		// 4.4. skip threads that are not marked as runnable.
 		if (next->state != SCHED_THREAD_STATE_RUNNABLE) {
 			continue;
 		}
 
-		// 3.4. return the candidate.
+		// 4.5. return the candidate.
 		return next;
 	}
 
@@ -247,4 +263,17 @@ void sched_thread_maybe_yield(void) {
 	if (sched_should_reschedule()) {
 		sched_thread_yield();
 	}
+}
+
+void sched_thread_suspend(uint64_t channels) {
+	KERNEL_ASSERT(current != 0);
+	current->state = SCHED_THREAD_STATE_BLOCKED;
+	current->blockedby = channels;
+	sched_thread_yield();
+}
+
+void sched_thread_resume_all(uint64_t channels) {
+	spinlock_acquire(&lock);
+	events |= channels;
+	spinlock_release(&lock);
 }

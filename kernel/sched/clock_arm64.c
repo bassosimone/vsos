@@ -2,8 +2,9 @@
 // Purpose: ARM64 implementation of clock.h
 // SPDX-License-Identifier: MIT
 
-#include <kernel/asm/arm64.h>	// for dsb_sy, etc.
-#include <kernel/sched/clock.h> // for sched_clock_init, etc.
+#include <kernel/asm/arm64.h>	 // for dsb_sy, etc.
+#include <kernel/sched/clock.h>	 // for sched_clock_init, etc.
+#include <kernel/sched/thread.h> // for sched_thread_resume_all
 
 // Flag indicating we should reschedule
 static uint64_t need_sched = 0;
@@ -49,6 +50,7 @@ void __sched_clock_init(void) {
 }
 
 void sched_clock_irq(void) {
+	sched_thread_resume_all(SCHED_THREAD_WAIT_TIMER);
 	__sched_clock_rearm();
 	__atomic_store_n(&need_sched, 1, __ATOMIC_RELEASE);
 }

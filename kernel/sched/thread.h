@@ -16,11 +16,23 @@
 // The thread has explicitly stopped running.
 #define SCHED_THREAD_STATE_EXITED 2
 
+// The thread is blocked waiting for a specific event to happen.
+#define SCHED_THREAD_STATE_BLOCKED 3
+
 // The size in bytes of the statically-allocated stack.
 #define SCHED_THREAD_STACK_SIZE 8192
 
 // The thread can be joined and must not be automatically reaped.
 #define SCHED_THREAD_FLAG_JOINABLE (1 << 0)
+
+// The thread is waiting for the UART to become readable.
+#define SCHED_THREAD_WAIT_UART_READABLE (1 << 0)
+
+// The thread is waiting for the UART to become writable.
+#define SCHED_THREAD_WAIT_UART_WRITABLE (1 << 1)
+
+// The thread is waiting on a timeer to expire.
+#define SCHED_THREAD_WAIT_TIMER (1 << 2)
 
 // The type of a thread's main function.
 typedef void(sched_thread_main_t)(void *opaque);
@@ -53,6 +65,9 @@ struct sched_thread {
 
 	// The raw trap frame pointer, which points inside the stack.
 	uintptr_t trapframe;
+
+	// The thing the thread is blocked by.
+	uint64_t blockedby;
 };
 
 // Starts a thread with the given main function and the given flags.
@@ -104,7 +119,7 @@ void __sched_thread_stack_init(struct sched_thread *thread);
 // Run the scheduler either switching to runnable threads or waiting for interrupts.
 //
 // This function must be called once at the end of the boot and assumes that
-// no one has run other threads or called sched_thread_yield.
+// no one has run any other threads or called sched_thread_yield.
 [[noreturn]] void sched_thread_run(void);
 
 // Code that returns to userspace possibly context switching current.
@@ -144,5 +159,26 @@ void __sched_thread_stack_init(struct sched_thread *thread);
 // Functions that call this function should document themselves
 // as cooperative synchronization points.
 void sched_thread_maybe_yield(void);
+
+// This function suspends the current thread until one of the
+// given channels (e.g., SCHED_THREAD_WAIT_UART_READABLE) becomes
+// available. Channels are a bitmask of possible event sources.
+//
+// This function MUST be called whenever it would be safe to
+// call the sched_thread_maybe_yield function.
+void sched_thread_suspend(uint64_t channels);
+
+// This function updates the bitmask of events occurred since
+// the last scheduler invocation. The next cooperative multitasking
+// point inside the kernel will unblock all the threads blocked by
+// the events accumulated inside the bitmask and clear it.
+//
+// Upon scheduling, the threads will run again. Spurious wakeups
+// are possible. Therefore, a thread will need to check whether the
+// condition it was blocked on was satisfied or not. If not, the
+// thread should suspend itself again.
+//
+// This function is safe to call from interrupt context.
+void sched_thread_resume_all(uint64_t channels);
 
 #endif // KERNEL_SCHED_THREAD_H
