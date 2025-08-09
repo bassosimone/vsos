@@ -2,10 +2,10 @@
 // Purpose: kernel thread scheduler
 // SPDX-License-Identifier: MIT
 
-#include <kernel/boot/irq.h>	  // for irq_restore_user_and_eret
 #include <kernel/core/assert.h>	  // for KERNEL_ASSERT
 #include <kernel/core/panic.h>	  // for panic
 #include <kernel/core/spinlock.h> // for struct spinlock
+#include <kernel/irq/irq.h>	  // for irq_restore_user_and_eret
 #include <kernel/sched/sched.h>	  // system's API
 #include <kernel/sys/errno.h>	  // for EAGAIN
 #include <kernel/sys/param.h>	  // for SCHED_MAX_THREADS

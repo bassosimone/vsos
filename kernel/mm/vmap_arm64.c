@@ -4,7 +4,7 @@
 // Adapted from: https://github.com/nuta/operating-system-in-1000-lines
 
 #include <kernel/asm/arm64.h>	// for dsb_sy, etc.
-#include <kernel/boot/layout.h> // for __kernel_base
+#include <kernel/boot/boot.h>	// for __kernel_base
 #include <kernel/core/assert.h> // for KERNEL_ASSERT
 #include <kernel/core/printk.h> // for printk
 #include <kernel/mm/palloc.h>	// for mm_phys_page_alloc_many

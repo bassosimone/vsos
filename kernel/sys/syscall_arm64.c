@@ -2,11 +2,11 @@
 // Purpose: system calls
 // SPDX-License-Identifier: MIT
 
-#include <kernel/boot/irq_arm64.h> // for struct trapframe
-#include <kernel/sys/errno.h>	   // for EBADF
-#include <kernel/sys/syscall.h>	   // for SYS_write
-#include <kernel/sys/types.h>	   // for uint64_t
-#include <kernel/tty/uart.h>	   // for uart_read
+#include <kernel/irq/arm64.h>	// for struct trapframe
+#include <kernel/sys/errno.h>	// for EBADF
+#include <kernel/sys/syscall.h> // for SYS_write
+#include <kernel/sys/types.h>	// for uint64_t
+#include <kernel/tty/uart.h>	// for uart_read
 
 // Returns the syscall from the x8 register just like on Linux
 static inline uint64_t sysno_from_regs(struct trapframe *frame) {
@@ -66,11 +66,12 @@ static uint64_t sys_write(uint64_t a0, uint64_t a1, uint64_t a2) {
 	}
 }
 
-void handle_syscall(struct trapframe *frame, uint64_t esr, uint64_t far) {
+void __syscall_handle(uint64_t rframe, uint64_t esr, uint64_t far) {
 	// TODO(bassosimone): we should use these
 	(void)esr;
 	(void)far;
 
+	struct trapframe *frame = (struct trapframe *)rframe;
 	switch (sysno_from_regs(frame)) {
 	case SYS_read:
 		frame->x[0] = sys_read(arg0(frame), arg1(frame), arg2(frame));

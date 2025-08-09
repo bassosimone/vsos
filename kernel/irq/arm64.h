@@ -1,15 +1,12 @@
-// File: kernel/boot/irq_arm64.h
-// Purpose: interface to manage IRQs on arm64
+// File: kernel/irq/arm64.h
+// Purpose: IRQ management in ARM64
 // SPDX-License-Identifier: MIT
-#ifndef KERNEL_BOOT_IRQ_ARM64_H
-#define KERNEL_BOOT_IRQ_ARM64_H
+#ifndef KERNEL_IRQ_ARM64_H
+#define KERNEL_IRQ_ARM64_H
 
 #include <kernel/sys/types.h>
 
-// Init the Generic Interrupt Controller v2 and enable interrupts.
-void gicv2_init();
-
-// The frame before the interrupt occurred.
+// Structure saving the pre-interrupt state.
 struct trapframe {
 	uint64_t x[31];
 	uint64_t sp_el0;
@@ -31,9 +28,4 @@ static_assert(__builtin_offsetof(struct trapframe, spsr_el1) == 776, "spsr_el1 o
 static_assert(__builtin_offsetof(struct trapframe, fpcr) == 784, "fpcr offset");
 static_assert(__builtin_offsetof(struct trapframe, fpsr) == 792, "fpsr offset");
 
-// Handles exceptions at execution level 1 (kernel) using a dedicated stack.
-//
-// The first argument is the stack frame of the caller.
-void irq_dispatch_el1h(struct trapframe *frame);
-
-#endif // KERNEL_BOOT_IRQ_ARM64_H
+#endif // KERNEL_IRQ_ARM64_H

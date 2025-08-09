@@ -1,9 +1,9 @@
-// File: kernel/boot/layout.h
-// Purpose: memory layout available to the kernel
+// File: kernel/boot/boot.h
+// Purpose: boot subsystem interface
 // SPDX-License-Identifier: MIT
 // Adapted from: https://github.com/nuta/operating-system-in-1000-lines
-#ifndef KERNEL_BOOT_LAYOUT_H
-#define KERNEL_BOOT_LAYOUT_H
+#ifndef KERNEL_BOOT_BOOT_H
+#define KERNEL_BOOT_BOOT_H
 
 // Start of kernel code
 extern char __kernel_base[];
@@ -42,4 +42,13 @@ extern char __free_ram[];
 // End of free memory
 extern char __free_ram_end[];
 
-#endif // KERNEL_BOOT_LAYOUT_H
+// The initial naked function invoked by the bootloader.
+__attribute__((section(".text.boot"))) __attribute__((naked)) void boot(void);
+
+// The machine dependent initialization function.
+[[noreturn]] void kernel_main(void);
+
+// The machine independent initialization function.
+[[noreturn]] void __kernel_main(void);
+
+#endif // KERNEL_BOOT_BOOT_H

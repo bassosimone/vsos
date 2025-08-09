@@ -1,18 +1,18 @@
 // File: kernel/boot/irq_arm64.c
-// Purpose: IRQ programming and handling for arm64
+// Purpose: GICv2 driver
 // SPDX-License-Identifier: MIT
 
-#include "kernel/boot/irq_arm64.h"
 #include <kernel/asm/arm64.h>	// for dsb_sy, etc.
 #include <kernel/core/printk.h> // for printk.
+#include <kernel/irq/irq.h>	// for irq_init
 #include <kernel/sched/sched.h> // for sched_clock_irq
 
-// The vectors defined in irq_vector_arm64.S
+// The vectors defined in vector_arm64.S
 extern char __vectors_el1[];
 
 // We're using GICv2, which should be available in `qemu-system-aarch64 -M virt`.
-#define GICD_BASE 0x08000000ul
-#define GICC_BASE 0x08010000ul
+#define GICD_BASE 0x08000000UL
+#define GICC_BASE 0x08010000UL
 
 // Distributor
 #define GICD_CTLR (*(volatile uint32_t *)(GICD_BASE + 0x000))
@@ -32,7 +32,7 @@ extern char __vectors_el1[];
 // The ARM Generic Timer (physical EL1) PPI is INTID 30 on GIC (per-cpu)
 #define IRQ_PPI_CNTP 30u
 
-void gicv2_init(void) {
+void irq_init(void) {
 	// Set the vector interrupt table
 	msr_vbar_el1((uint64_t)__vectors_el1);
 
@@ -67,7 +67,7 @@ static inline void gicv2_eoi(unsigned iar) {
 	GICC_EOIR = iar;
 }
 
-void irq_dispatch_el1h(struct trapframe *frame) {
+void irq_handle(uintptr_t frame) {
 	// We will use the frame in the future to context switch
 	(void)frame;
 

@@ -1,6 +1,9 @@
-    // File: kernel/boot/irq_vector_arm64.S
-    // Purpose: complete AArch64 EL1 vector table with assembly handlers
+    // File: kernel/asm/vector_arm64.S
+    // Purpose: ARM64 exception vectors
     // SPDX-License-Identifier: MIT
+
+    // TODO(bassosimone): in the future we may consider to push
+    // thread local registers and performance counter stuff.
 
     .section .text.vectors, "ax", %progbits
     .align 11                        // 2KB alignment for VBAR_EL1
@@ -29,7 +32,7 @@ __vectors_el1:
 
     // 0x280: IRQ EL1h
     .balign 128
-    b el1h_irq
+    b __arm64_handle_el1h_irq
 
     // 0x300: FIQ EL1h
     .balign 128
@@ -41,7 +44,7 @@ __vectors_el1:
 
     // 0x400: Synchronous from lower EL using AArch64 (EL0 64-bit)
     .balign 128
-    b el0_sync
+    b __arm64_handle_syscall
 
     // 0x480: IRQ from lower EL using AArch64
     // TODO(bassosimone): this is technical debt. However, for now it
@@ -49,7 +52,7 @@ __vectors_el1:
     // when an interrupt happens in user code. Also, the function must
     // save everything, and it could be leaner for the kernel.
     .balign 128
-    b el1h_irq
+    b __arm64_handle_el1h_irq
 
     // 0x500: FIQ from lower EL using AArch64
     .balign 128
@@ -78,12 +81,15 @@ __vectors_el1:
     // Register the object size for debugging purposes
     .size __vectors_el1, . - __vectors_el1
 
+    // void __arm64_handle_el1h_irq(void);
+    //
+    // Handles interrupts when running at kernel level.
     .section .text
-    .global el1h_irq
+    .global __arm64_handle_el1h_irq
     .align 4
-    .type el1h_irq, %function
-    .extern irq_dispatch_el1h
-el1h_irq:
+    .type __arm64_handle_el1h_irq, %function
+    .extern irq_handle
+__arm64_handle_el1h_irq:
     // Interrupts are disabled when we enter here and we keep
     // them disabled for the whole handler duration.
     //
@@ -143,7 +149,7 @@ el1h_irq:
 
     // Handle the interrupt passing the frame as context
     mov x0, sp
-    bl  irq_dispatch_el1h
+    bl  irq_handle
 
     // Restore floating point control/status registers
     ldr x20, [sp, #792]
@@ -200,13 +206,16 @@ el1h_irq:
     // Return from exception
     eret
 
+    // void __arm64_handle_syscall(void);
+    //
+    // Handles syscalls.
     .section .text
-    .global el0_sync
+    .global __arm64_handle_syscall
     .align 4
-    .type el0_sync, %function
-    .extern handle_syscall
+    .type __arm64_handle_syscall, %function
+    .extern __syscall_handle
     .extern sched_return_to_user
-el0_sync:
+__arm64_handle_syscall:
     // Interrupts are disabled when we enter here and we keep
     // them disabled for the whole handler duration.
     //
@@ -268,13 +277,16 @@ el0_sync:
     mov x0, sp
     mrs x1, esr_el1
     mrs x2, far_el1
-    bl  handle_syscall
+    bl  __syscall_handle
 
     // Tail call the code to return to user space including
     // possibly performing a context switch
     mov x0, sp
     b sched_return_to_user
 
+    // void irq_restore_user_and_eret(uintptr_t trapframe);
+    //
+    // Handles syscalls.
     .section .text
     .global irq_restore_user_and_eret
     .align 4
