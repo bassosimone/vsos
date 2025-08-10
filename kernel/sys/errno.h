@@ -8,6 +8,9 @@
 
 // We try to use the same numbers used by Linux
 
+// Input/output error.
+#define EIO 5
+
 // Bad file descriptor.
 #define EBADF 9
 
