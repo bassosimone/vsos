@@ -12,10 +12,12 @@ void __sched_idle(void) {
 void sched_thread_yield(void) {
 	// Disable interrupts while switching
 	msr_daifset_2();
+	isb();
 
 	// Perform the actual switch
 	__sched_thread_yield();
 
 	// Re-enable interrupts when done
 	msr_daifclr_2();
+	isb();
 }
