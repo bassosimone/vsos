@@ -42,6 +42,9 @@ extern char __free_ram[];
 // End of free memory
 extern char __free_ram_end[];
 
+// Location of the interrupt vectors in memory.
+extern char __vectors_el1[];
+
 // The initial naked function invoked by the bootloader.
 __attribute__((section(".text.boot"))) __attribute__((naked)) void boot(void);
 

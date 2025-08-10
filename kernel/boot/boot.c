@@ -43,19 +43,21 @@ static void thread_goodbye(void *opaque) {
 }
 
 [[noreturn]] void __kernel_main(void) {
-	// 1. zero the BSS section
+	// 1. Zero the BSS section.
 	memset(__bss, 0, (size_t)(__bss_end - __bss));
 
-	// 2. initialize the serial console
+	// 2. Initialize an early serial console.
 	uart_init_early();
 
-	// 3. intialize the GICv2
-	printk("initializing irq...\n");
-	irq_init();
-	printk("initializing irq... ok\n");
-
-	// 4. initialize the memory manager
+	// 3. Initialize the memory manager.
+	//
+	// This will also initialize the mmap for other subsystems.
 	mm_init();
+
+	// 4. Initialize the IRQ manager.
+	//
+	// This will also initialize IRQs for other subsystems.
+	irq_init();
 
 	// 5. create a thread for saying hello to the world
 	int64_t tid = sched_thread_start(thread_hello, /* opaque */ 0, /* flags */ 0);
@@ -69,7 +71,8 @@ static void thread_goodbye(void *opaque) {
 	tid = sched_thread_start(_sleeper, /* opaque */ 0, /* flags */ 0);
 	printk("started sleeper thread: %d\n", tid);
 
-	// 8. run the thread scheduler
+	// 8. Run the thread scheduler
 	printk("starting thread scheduler...\n");
 	sched_thread_run();
+	panic("unreachable code\n");
 }

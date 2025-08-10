@@ -7,6 +7,7 @@
 #include <kernel/boot/boot.h>	// for __kernel_base
 #include <kernel/core/assert.h> // for KERNEL_ASSERT
 #include <kernel/core/printk.h> // for printk
+#include <kernel/irq/irq.h>	// for irq_init_mm
 #include <kernel/mm/palloc.h>	// for mm_phys_page_alloc_many
 #include <kernel/mm/types.h>	// for mm_virt_addr_t
 #include <kernel/mm/vmap.h>	// for __mm_virt_page_map_assume_aligned
@@ -166,18 +167,6 @@ void __mm_virt_page_map_assume_aligned(mm_phys_addr_t table,
 // The kernel root page table.
 static uint64_t kernel_root_table;
 
-// TODO(bassosimone): we should see to define these constants once
-// rather than defining them both here and when we use devices.
-
-// GIC Distributor (64 KiB)
-#define VIRT_GICD_BASE 0x08000000ULL
-
-// GIC CPU interface
-#define VIRT_GICC_BASE 0x08010000ULL
-
-// GIC Redistributors (at least 1 frame)
-#define VIRT_GICR_BASE 0x080A0000ULL
-
 void mm_init(void) {
 	// 1) Root table for TTBR0 (kernel)
 	kernel_root_table = mm_phys_page_alloc_many(1);
@@ -201,16 +190,7 @@ void mm_init(void) {
 	mm_map_identity(kernel_root_table, (uint64_t)__stack_bottom, (uint64_t)__stack_top, MM_FLAG_WRITE);
 
 	// 3) Map devices we actually use
-	mm_flags_t devflags = MM_FLAG_DEVICE | MM_FLAG_WRITE;
-	printk("mm: mapping VIRT_GICD_BASE\n");
-	mm_map_identity(kernel_root_table, VIRT_GICD_BASE, VIRT_GICD_BASE + 0x10000ULL, devflags);
-
-	printk("mm: mapping VIRT_GICC_BASE\n");
-	mm_map_identity(kernel_root_table, VIRT_GICC_BASE, VIRT_GICC_BASE + 0x2000ULL, devflags);
-
-	printk("mm: mapping VIRT_GICR_BASE\n");
-	mm_map_identity(kernel_root_table, VIRT_GICR_BASE, VIRT_GICR_BASE + 0x20000ULL, devflags);
-
+	irq_init_mm();
 	uart_init_mm();
 
 	// 4) MAIR: idx0 Normal WBWA, idx1 Device-nGnRE
