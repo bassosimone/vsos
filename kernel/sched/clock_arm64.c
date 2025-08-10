@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 #include <kernel/asm/arm64.h>	// for dsb_sy, etc.
+#include <kernel/core/printk.h> // for printk
 #include <kernel/sched/sched.h> // subsystem API
 #include <kernel/sys/param.h>	// for HZ
 
@@ -31,7 +32,8 @@ static void __sched_clock_rearm() {
 	isb();
 }
 
-void __sched_clock_init(void) {
+void sched_clock_init_irq(void) {
+	printk("clock0: ticking %lld times per second\n", HZ);
 	__sched_clock_rearm();
 }
 

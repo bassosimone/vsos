@@ -17,10 +17,10 @@ void sched_clock_irq(void);
 
 // Initialize the timer to interrupt every HZ.
 //
-// Called by the scheduler internals.
+// Called by the IRQ subsystem.
 //
 // Do not use outside of this subsystem.
-void __sched_clock_init(void);
+void sched_clock_init_irq(void);
 
 // Returns true if we should trigger a reschedule.
 //

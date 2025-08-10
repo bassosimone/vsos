@@ -4,6 +4,7 @@
 
 #include <kernel/core/assert.h>	  // for KERNEL_ASSERT
 #include <kernel/core/panic.h>	  // for panic
+#include <kernel/core/printk.h>	  // for printk
 #include <kernel/core/spinlock.h> // for struct spinlock
 #include <kernel/irq/irq.h>	  // for irq_restore_user_and_eret
 #include <kernel/sched/sched.h>	  // system's API
@@ -159,10 +160,6 @@ int64_t sched_thread_start(sched_thread_main_t *main, void *opaque, uint64_t fla
 // Loop forever yielding the CPU and then awaiting for interrupts.
 [[noreturn]] static void __idle_main(void *unused) {
 	(void)unused;
-
-	// Start the pre-emptive scheduler
-	__sched_clock_init();
-
 	// Just sleep without consuming resources and yield
 	// the processor as soon as possible.
 	for (;;) {
@@ -197,15 +194,18 @@ static void __unlock_and_switch_to(struct sched_thread *next) {
 [[noreturn]] void sched_thread_run(void) {
 	// Manually instantiate the idle thread
 	int64_t rv = sched_thread_start(__idle_main, /* opaque */ 0, /* flags */ 0);
+	printk("scheduler: created idle thread with ID: %lld\n", rv);
 	KERNEL_ASSERT(rv >= 0);
 
 	// Ensure the idle thread is accessible
 	idle_thread = &threads[rv];
 
 	// Manually set it as the currently running thread
+	printk("scheduler: setting the idle thread as the current thread\n");
 	current = idle_thread;
 
 	// Manually switch to its execution context
+	printk("scheduler: transferring control to the idle thread\n");
 	__sched_switch(0, idle_thread);
 	panic("unreachable");
 }

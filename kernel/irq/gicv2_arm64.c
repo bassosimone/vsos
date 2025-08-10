@@ -53,26 +53,30 @@ void irq_init(void) {
 	msr_vbar_el1((uint64_t)__vectors_el1);
 
 	// Mask CPU interface, then enable distributor, then CPU interface
+	printk("irq0: disabling CPU IF and dist\n");
 	GICC_CTLR = 0; // disable CPU IF
 	GICD_CTLR = 0; // disable dist
 	dsb_sy();
 
 	// Set priority mask to allow all (0xFF = lowest priority accepted)
+	printk("irq0: setting priority mask to allow all interrupts\n");
 	GICC_PMR = 0xFF;
 	GICC_BPR = 0; // no binary point split
 
 	// Enable timer PPI (banked per CPU): INTID 30 lives in ISENABLER0 (0..31)
+	printk("irq0: unmarsking PPI %u (timer)\n", IRQ_PPI_CNTP);
 	GICD_ICENABLER(0) = (1u << IRQ_PPI_CNTP);
 	GICD_ICPENDR(0) = (1u << IRQ_PPI_CNTP); // clear any pending
 	GICD_ISENABLER(0) = (1u << IRQ_PPI_CNTP);
 
 	// Enable distributor and CPU interface
+	printk("irq0: enabling CPU IF and dist\n");
 	GICD_CTLR = 1; // enable dist
 	GICC_CTLR = 1; // enable CPU IF
 	dsb_sy();
 
-	// Let the user know what we have done
-	printk("irq0: GICv2 enabled, PPI %u unmasked\n", IRQ_PPI_CNTP);
+	// Start IRQ for other subsystems
+	sched_clock_init_irq();
 }
 
 static inline uint32_t gicv2_ack(void) {
