@@ -25,7 +25,6 @@ static inline void dsb_sy(void) {
 
 // WFI: wait for interrupts
 static inline void wfi(void) {
-	dsb_sy();
 	__asm__ volatile("wfi");
 }
 
@@ -119,25 +118,21 @@ static inline void dsb_ishst(void) {
 // Write MAIR_EL1
 static inline void msr_mair_el1(uint64_t val) {
 	__asm__ volatile("msr mair_el1, %0" ::"r"(val) : "memory");
-	isb();
 }
 
 // Write TCR_EL1
 static inline void msr_tcr_el1(uint64_t val) {
 	__asm__ volatile("msr tcr_el1, %0" ::"r"(val) : "memory");
-	isb();
 }
 
 // Write TTBR1_EL1
 static inline void msr_ttbr1_el1(uint64_t val) {
 	__asm__ volatile("msr ttbr1_el1, %0" ::"r"(val) : "memory");
-	isb();
 }
 
 // Write TTBR0_EL1
 static inline void msr_ttbr0_el1(uint64_t val) {
 	__asm__ volatile("msr ttbr0_el1, %0" ::"r"(val) : "memory");
-	isb();
 }
 
 // Read SCTLR_EL1
@@ -150,13 +145,11 @@ static inline uint64_t mrs_sctlr_el1(void) {
 // Write SCTLR_EL1
 static inline void msr_sctlr_el1(uint64_t val) {
 	__asm__ volatile("msr sctlr_el1, %0" ::"r"(val) : "memory");
-	isb();
 }
 
 // Write VBAR_EL1
 static inline void msr_vbar_el1(uint64_t v) {
 	__asm__ volatile("msr vbar_el1, %0" ::"r"(v) : "memory");
-	isb();
 }
 
 // Returns the number of ticks per second used by the hardware.

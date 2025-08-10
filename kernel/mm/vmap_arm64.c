@@ -197,6 +197,7 @@ void mm_init(void) {
 	uint64_t mair = (MAIR_ATTR_NORMAL_WBWA << 0) | (MAIR_ATTR_DEVICE_nGnRE << 8);
 	printk("mm: msr_mair_el1 %llx\n", mair);
 	msr_mair_el1(mair);
+	isb();
 
 	// 5) TCR: 39-bit VA for TTBR0/1, 4K granule, Inner WBWA, Inner-shareable
 	const uint64_t T0SZ = 25, T1SZ = 25;
@@ -209,16 +210,19 @@ void mm_init(void) {
 	tcr |= IPS_40BIT;
 	printk("mm: msr_tcr_el1 %llx\n", tcr);
 	msr_tcr_el1(tcr);
+	isb();
 
 	// 6) set TTBR0 to the kernel root
 	printk("mm: msr_tbr0_el1\n");
 	msr_ttbr0_el1(kernel_root_table);
+	isb();
 
 	// 7) Enable MMU + caches
 	uint64_t sctlr = mrs_sctlr_el1();
 	sctlr |= (1ULL << 0) | (1ULL << 2) | (1ULL << 12); /* M: MMU enable; C: data cache; I: icache */
 	printk("mm: msr_sctlr_el1: %llx\n", sctlr);
 	msr_sctlr_el1(sctlr);
+	isb();
 }
 
 void mmap_identity(mm_phys_addr_t start, mm_phys_addr_t end, mm_flags_t flags) {
