@@ -34,11 +34,27 @@ static void thread_goodbye(void *opaque) {
 	sched_thread_yield();
 }
 
-[[noreturn]] static void _sleeper(void *opaque) {
+static void _sleeper(void *opaque) {
 	(void)opaque;
-	for (;;) {
+	for (size_t idx = 0; idx < 4; idx++) {
 		sched_thread_millisleep(750);
 		printk("Hello!\n");
+	}
+}
+
+// Very minimal mechanism to ensure we echo the input.
+static void _echo_thread(void *opaque) {
+	(void)opaque;
+	for (;;) {
+		char ch = 0;
+		ssize_t n = uart_read(&ch, 1);
+		if (n != 1) {
+			continue;
+		}
+		if (ch == '\r') {
+			ch = '\n';
+		}
+		uart_try_write(ch);
 	}
 }
 
@@ -63,6 +79,10 @@ static void __kernel_zygote(void *opaque) {
 	// 4. create a thread that prints a message every second
 	tid = sched_thread_start(_sleeper, /* opaque */ 0, /* flags */ 0);
 	printk("started sleeper thread: %d\n", tid);
+
+	// 5. create a thread that echoes what we write.
+	tid = sched_thread_start(_echo_thread, /* opaque */ 0, /* flags */ 0);
+	printk("started echo thread: %d\n", tid);
 }
 
 [[noreturn]] void __kernel_main(void) {

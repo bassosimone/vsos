@@ -13,11 +13,7 @@ ssize_t uart_read(char *buffer, size_t siz) {
 
 	// Read as many bytes as possible
 	while (nb < siz) {
-		int16_t res = uart_try_read();
-		if (res == -EWOULDBLOCK) {
-			// TODO(bassosimone): block the thread
-			continue;
-		}
+		int16_t res = __uart_getchar(/* flags */ 0);
 		if (res < 0) {
 			return (nb > 0) ? nb : (ssize_t)res;
 		}

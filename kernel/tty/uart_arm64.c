@@ -6,21 +6,15 @@
 #include <kernel/asm/arm64.h>
 #include <kernel/core/assert.h>
 #include <kernel/core/printk.h>
+#include <kernel/core/ringbuf.h>
 #include <kernel/mm/vmap.h>
 #include <kernel/sched/sched.h>
 #include <kernel/sys/errno.h>
+#include <kernel/sys/fcntl.h>
 #include <kernel/tty/uart.h>
 
 // PL011 UART base address in QEMU virt
 #define UART0_BASE 0x09000000
-
-// Data register
-// TODO(bassosimone): use inline functions instead
-#define UARTDR (*(volatile uint32_t *)(UART0_BASE + 0x00))
-
-// Flags register
-// TODO(bassosimone): use inline functions instead
-#define UARTFR (*(volatile uint32_t *)(UART0_BASE + 0x18))
 
 // Returns the limit of the MMIO range given a specific base.
 static inline uintptr_t memory_limit(uintptr_t base) {
@@ -163,6 +157,9 @@ static inline volatile uint32_t *mis_addr(uintptr_t base) {
 	return (volatile uint32_t *)(base + 0x40);
 }
 
+// Ring buffer for receiving characters from the UART.
+static struct ringbuf rxbuf;
+
 // Service the IRQ for the given base UART addr.
 static inline void __uart_irq_base(uintptr_t base) {
 	uint32_t mis = *mis_addr(base);
@@ -171,7 +168,7 @@ static inline void __uart_irq_base(uintptr_t base) {
 	if ((mis & (UARTINT_RX | UARTINT_RT | UARTINT_OE)) != 0) {
 		// Drain the RX FIFO first including per-byte flags
 		while (__uart_readable(base)) {
-			(void)(*dr_addr(base) & 0xFFFF);
+			(void)ringbuf_push(&rxbuf, *dr_addr(base) & 0xFFFF);
 		}
 
 		// Clear RX-related causes and stop the interrupt from firing
@@ -180,19 +177,43 @@ static inline void __uart_irq_base(uintptr_t base) {
 		// Wake up any sleeping thread
 		sched_thread_resume_all(SCHED_THREAD_WAIT_UART_READABLE);
 	}
-
-	// TODO(bassosimone): this line will soon become harmful but for now
-	// we need to keep it to confirm it's working. The real reason for harm
-	// would that that we'll eventually sleep on writable UART.
-	printk("uart: IRQ\n");
 }
 
 void uart_irq(void) {
 	__uart_irq_base(UART0_BASE);
 }
 
+int16_t __uart_getchar(uint32_t flags) {
+	for (;;) {
+		// First attempt to read from the ring buffer
+		uint16_t data = 0;
+		if (ringbuf_pop(&rxbuf, &data)) {
+			// Separate actual data from error flags.
+			uint8_t err = (data & 0x0F00) >> 8;
+			if (err != 0) {
+				return -EIO;
+			}
+			return data & 0xFF;
+		}
+
+		// Handle the case of nonblocking reading
+		if ((flags & O_NONBLOCK) != 0) {
+			return -EAGAIN;
+		}
+
+		// Suspend until we have data to read
+		sched_thread_suspend(SCHED_THREAD_WAIT_UART_READABLE);
+	}
+}
+
 // TODO(bassosimone): the code below should be refactored
 // and completely deprecated. We want to only use IRQs.
+
+// Data register
+#define UARTDR (*(volatile uint32_t *)(UART0_BASE + 0x00))
+
+// Flags register
+#define UARTFR (*(volatile uint32_t *)(UART0_BASE + 0x18))
 
 int16_t uart_try_read(void) {
 	sched_thread_maybe_yield();

@@ -57,6 +57,13 @@ bool uart_writable(void);
 // The read system call using the UART.
 ssize_t uart_read(char *buffer, size_t siz);
 
+// MD implementation of reading a byte from the UART.
+//
+// This function should only be called by functions in this subsystem.
+//
+// Returns a >= char (uint8_t) or a negative errno value.
+int16_t __uart_getchar(uint32_t flags);
+
 // The write system call using the UART.
 ssize_t uart_write(const char *buffer, size_t siz);
 
