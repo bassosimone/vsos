@@ -22,6 +22,11 @@ void uart_init_mm(void);
 // Called by the irq subsystem.
 void uart_init_irq(void);
 
+// Handle UART interrupt request.
+//
+// Called by the irq handler.
+void uart_irq(void);
+
 // Attempts to read a character from the UART device.
 //
 // This function is a cooperative synchronization point. The code will

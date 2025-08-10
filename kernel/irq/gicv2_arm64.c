@@ -176,6 +176,10 @@ void irq_handle(uintptr_t frame) {
 		sched_clock_irq();
 		break;
 
+	case UART0_INTID:
+		uart_irq();
+		break;
+
 	default:
 		// Mask unexpected lines so they can't storm while debugging.
 		*gicd_icenabler_addr(GICD_BASE, (irqid / 32)) = (1u << (irqid % 32));
