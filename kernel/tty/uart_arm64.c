@@ -4,12 +4,17 @@
 // Adapted from: https://github.com/nuta/operating-system-in-1000-lines
 
 #include <kernel/asm/arm64.h>
+#include <kernel/core/printk.h>
+#include <kernel/mm/vmap.h>
 #include <kernel/sched/sched.h>
 #include <kernel/sys/errno.h>
 #include <kernel/tty/uart.h>
 
 // PL011 UART base address in QEMU virt
 #define UART0_BASE 0x09000000
+
+// Limit of the memory mapped region for the UART
+#define UART0_LIMIT UART0_BASE + 0x1000ULL
 
 // Data register
 #define UARTDR (*(volatile uint32_t *)(UART0_BASE + 0x00))
@@ -32,7 +37,7 @@
 // Receive FIFO empty
 #define UARTFR_RXFE (1 << 4)
 
-void uart_init(void) {
+void uart_init_early(void) {
 	// QEMU's PL011 is pre-initialized.
 	//
 	// However, let's do the exercise of resetting it.
@@ -46,14 +51,29 @@ void uart_init(void) {
 
 	// Mask all IRQs
 	*imsc = 0x0;
+
 	// Clear any pending IRQs
 	*icr = 0x7FF;
+
 	// "Push" changes
 	dsb_sy();
 
 	// Enable TXE | RXE | UARTEN and "push" changes
 	*cr = (1 << 9) | (1 << 8) | (1 << 0);
 	dsb_sy();
+
+	// This is the first moment in the boot process where
+	// the printk call would actually work
+	printk("uart0: enabled: TXE | RXE | UARTEN\n");
+}
+
+void uart_init_mm(void) {
+	printk("uart0: mmap_identity %llx - %llx\n", UART0_BASE, UART0_LIMIT);
+	mmap_identity(UART0_BASE, UART0_LIMIT, MM_FLAG_DEVICE | MM_FLAG_WRITE);
+}
+
+void uart_init_irq(void) {
+	// TODO(bassosimone): implement this function
 }
 
 int16_t uart_try_read(void) {

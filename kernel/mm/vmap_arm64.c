@@ -10,6 +10,7 @@
 #include <kernel/mm/palloc.h>	// for mm_phys_page_alloc_many
 #include <kernel/mm/types.h>	// for mm_virt_addr_t
 #include <kernel/mm/vmap.h>	// for __mm_virt_page_map_assume_aligned
+#include <kernel/tty/uart.h>	// for uart_init_mm
 #include <libc/string/string.h> // for memset
 
 // We're using identity mapping in this kernel
@@ -177,11 +178,8 @@ static uint64_t kernel_root_table;
 // GIC Redistributors (at least 1 frame)
 #define VIRT_GICR_BASE 0x080A0000ULL
 
-// PL011 UART (4 KiB)
-#define VIRT_UART0_BASE 0x09000000ULL
-
 void mm_init(void) {
-	// 1) Root table for TTBR1 (kernel)
+	// 1) Root table for TTBR0 (kernel)
 	kernel_root_table = mm_phys_page_alloc_many(1);
 	printk("mm: kernel_root_table %llx\n", kernel_root_table);
 
@@ -213,8 +211,7 @@ void mm_init(void) {
 	printk("mm: mapping VIRT_GICR_BASE\n");
 	mm_map_identity(kernel_root_table, VIRT_GICR_BASE, VIRT_GICR_BASE + 0x20000ULL, devflags);
 
-	printk("mm: mapping VIRT_UART0_BASE\n");
-	mm_map_identity(kernel_root_table, VIRT_UART0_BASE, VIRT_UART0_BASE + 0x1000ULL, devflags);
+	uart_init_mm();
 
 	// 4) MAIR: idx0 Normal WBWA, idx1 Device-nGnRE
 	uint64_t mair = (MAIR_ATTR_NORMAL_WBWA << 0) | (MAIR_ATTR_DEVICE_nGnRE << 8);
@@ -242,4 +239,8 @@ void mm_init(void) {
 	sctlr |= (1ULL << 0) | (1ULL << 2) | (1ULL << 12); /* M: MMU enable; C: data cache; I: icache */
 	printk("mm: msr_sctlr_el1: %llx\n", sctlr);
 	msr_sctlr_el1(sctlr);
+}
+
+void mmap_identity(mm_phys_addr_t start, mm_phys_addr_t end, mm_flags_t flags) {
+	mm_map_identity(kernel_root_table, start, end, flags);
 }

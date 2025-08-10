@@ -11,7 +11,7 @@
 #include <kernel/sched/sched.h> // whole subsystem API
 #include <kernel/sys/param.h>	// for HZ
 #include <kernel/sys/types.h>	// for size_t
-#include <kernel/tty/uart.h>	// for uart_init
+#include <kernel/tty/uart.h>	// for uart_init_early
 #include <libc/string/string.h> // for memset
 
 static void thread_hello(void *opaque) {
@@ -47,8 +47,7 @@ static void thread_goodbye(void *opaque) {
 	memset(__bss, 0, (size_t)(__bss_end - __bss));
 
 	// 2. initialize the serial console
-	uart_init();
-	printk("initialized uart\n");
+	uart_init_early();
 
 	// 3. intialize the GICv2
 	printk("initializing irq...\n");
@@ -56,9 +55,7 @@ static void thread_goodbye(void *opaque) {
 	printk("initializing irq... ok\n");
 
 	// 4. initialize the memory manager
-	printk("initializing mm...\n");
 	mm_init();
-	printk("initializing mm... ok\n");
 
 	// 5. create a thread for saying hello to the world
 	int64_t tid = sched_thread_start(thread_hello, /* opaque */ 0, /* flags */ 0);

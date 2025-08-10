@@ -7,8 +7,20 @@
 
 #include <kernel/sys/types.h>
 
-// Initializes the UART subsystem.
-void uart_init(void);
+// Early initialization for the UART driver.
+//
+// Called by the boot sybsystem.
+void uart_init_early(void);
+
+// Initialize memory mapping for the UART driver.
+//
+// Called by the mm subsystem.
+void uart_init_mm(void);
+
+// Initialize IRQs for the UART driver.
+//
+// Called by the irq subsystem.
+void uart_init_irq(void);
 
 // Attempts to read a character from the UART device.
 //
