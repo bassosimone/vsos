@@ -73,9 +73,17 @@ static inline volatile uint32_t *gicc_iar(uintptr_t base) {
 	return (volatile uint32_t *)(base + 0x00C);
 }
 
+static inline void __enable_timer_ppi(void) {
+	printk("irq0: enabling interrupt PPI %u (timer)\n", IRQ_PPI_CNTP);
+	*gicd_icenabler_addr(GICD_BASE, 0) = (1u << IRQ_PPI_CNTP);
+	*gicd_icpendr_addr(GICD_BASE, 0) = (1u << IRQ_PPI_CNTP);
+	*gicd_isenabler_addr(GICD_BASE, 0) = (1u << IRQ_PPI_CNTP);
+}
+
 void irq_init(void) {
 	// Set the vector interrupt table
 	msr_vbar_el1((uint64_t)__vectors_el1);
+	isb();
 
 	// Disable the CPU interface and the distributor.
 	printk("irq0: disabling CPU interface and distributor\n");
@@ -88,17 +96,15 @@ void irq_init(void) {
 	*gicc_pmr_addr(GICC_BASE) = 0xFF;
 	*gicc_bpr_addr(GICC_BASE) = 0;
 
-	// Enable timer PPI (banked per CPU): INTID 30 lives in ISENABLER0 (0..31)
-	printk("irq0: enabling interrupt PPI %u (timer)\n", IRQ_PPI_CNTP);
-	*gicd_icenabler_addr(GICD_BASE, 0) = (1u << IRQ_PPI_CNTP);
-	*gicd_icpendr_addr(GICD_BASE, 0) = (1u << IRQ_PPI_CNTP);
-	*gicd_isenabler_addr(GICD_BASE, 0) = (1u << IRQ_PPI_CNTP);
+	// Enable devices
+	__enable_timer_ppi();
 
 	// Enable distributor and CPU interface again.
-	printk("irq0: enabling CPU IF and dist\n");
+	printk("irq0: enabling CPU interface and distributor\n");
 	*gicd_ctrl_addr(GICD_BASE) = 1;
 	*gicc_ctrl_addr(GICC_BASE) = 1;
 	dsb_sy();
+	isb();
 
 	// Start IRQ for other subsystems
 	sched_clock_init_irq();
@@ -109,6 +115,9 @@ void irq_handle(uintptr_t frame) {
 
 	// Acknowledge the IRQ and get the context
 	uint32_t iar = *gicc_iar(GICC_BASE);
+	dsb_sy();
+
+	// Extract the interrupt ID from the context
 	uint32_t irqid = iar & 0x3FFu;
 
 	// Handle spurious IRQ
@@ -128,4 +137,6 @@ void irq_handle(uintptr_t frame) {
 
 	// We're done handling this interrupt
 	*gicc_eoir_addr(GICC_BASE) = iar;
+	dsb_sy();
+	isb();
 }
