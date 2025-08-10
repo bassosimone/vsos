@@ -9,7 +9,7 @@
 // Contains a lock we will spin on.
 struct spinlock {
 	// The value controlling spin locking.
-	volatile uint64_t value;
+	volatile uint8_t value;
 };
 
 // Use this macro to intialize a static spinlock.
