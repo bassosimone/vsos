@@ -1,4 +1,4 @@
-// File: kernel/boot/irq_arm64.c
+// File: kernel/irq/gicv2_arm64.c
 // Purpose: GICv2 driver
 // SPDX-License-Identifier: MIT
 
@@ -8,17 +8,21 @@
 #include <kernel/irq/irq.h>	// for irq_init
 #include <kernel/mm/vmap.h>	// for mmap_identity
 #include <kernel/sched/sched.h> // for sched_clock_irq
+#include <kernel/tty/uart.h>	// for uart_init_irq
 
 // Base and limit memory addresses for the GICC.
 #define GICC_BASE 0x08010000UL
-#define GICC_LIMIT GICC_BASE + 0x2000ULL
+#define GICC_LIMIT (GICC_BASE + 0x2000ULL)
 
 // Base and limit memory addresses for the GICD.
 #define GICD_BASE 0x08000000UL
-#define GICD_LIMIT GICD_BASE + 0x10000ULL
+#define GICD_LIMIT (GICD_BASE + 0x10000ULL)
 
 // The ARM Generic Timer (physical EL1) PPI is INTID 30 on GIC (per-cpu)
 #define IRQ_PPI_CNTP 30u
+
+// The UART0 (PL011) on QEMU virt
+#define UART0_INTID 33u
 
 void irq_init_mm(void) {
 	printk("irq0: mmap_identity GICD_BASE %llx - %llx\n", GICD_BASE, GICD_LIMIT);
@@ -69,15 +73,54 @@ static inline volatile uint32_t *gicc_eoir_addr(uintptr_t base) {
 }
 
 // GICC_IAR: CPU interface interrupt acknowledgment register.
-static inline volatile uint32_t *gicc_iar(uintptr_t base) {
+static inline volatile uint32_t *gicc_iar_addr(uintptr_t base) {
 	return (volatile uint32_t *)(base + 0x00C);
 }
 
-static inline void __enable_timer_ppi(void) {
+// GICD_IPRIORITYR: byte-addressed priority registers (one byte per INTID)
+static inline volatile uint8_t *gicd_ipriorityr_byte_addr(uintptr_t base, size_t i) {
+	return (volatile uint8_t *)(base + 0x400 + i);
+}
+
+// GICD_ITARGETSR: byte-addressed target CPU registers (one byte per INTID; SPIs only)
+static inline volatile uint8_t *gicd_itargetsr_byte_addr(uintptr_t base, size_t i) {
+	return (volatile uint8_t *)(base + 0x800 + i);
+}
+
+// GICD_ICFGR: config (edge/level) registers (2 bits per INTID)
+static inline volatile uint32_t *gicd_icfgr_addr(uintptr_t base, size_t n) {
+	return (volatile uint32_t *)(base + 0xC00 + 4 * n);
+}
+
+static inline void __enable_timer_irq(void) {
 	printk("irq0: enabling interrupt PPI %u (timer)\n", IRQ_PPI_CNTP);
 	*gicd_icenabler_addr(GICD_BASE, 0) = (1u << IRQ_PPI_CNTP);
 	*gicd_icpendr_addr(GICD_BASE, 0) = (1u << IRQ_PPI_CNTP);
 	*gicd_isenabler_addr(GICD_BASE, 0) = (1u << IRQ_PPI_CNTP);
+}
+
+static inline void __enable_uart_irq(void) {
+	const uint32_t id = UART0_INTID; // 33
+	const uint32_t n = id / 32;	 // 1
+	const uint32_t bit = id % 32;	 // 1
+
+	// Priority (lower is higher priority)
+	*gicd_ipriorityr_byte_addr(GICD_BASE, id) = 0x80;
+
+	// Route to CPU0 (bit0 = CPU0)
+	*gicd_itargetsr_byte_addr(GICD_BASE, id) = 0x01;
+
+	// Level-sensitive (00b)
+	const uint32_t idx = id / 16;	      // 2
+	const uint32_t shift = (id % 16) * 2; // 2
+	uint32_t cfgr = *gicd_icfgr_addr(GICD_BASE, idx);
+	cfgr &= ~(3u << shift); // clear to 00b (level)
+	*gicd_icfgr_addr(GICD_BASE, idx) = cfgr;
+
+	// Clean pending, (re)disable, then enable
+	*gicd_icenabler_addr(GICD_BASE, n) = (1u << bit);
+	*gicd_icpendr_addr(GICD_BASE, n) = (1u << bit);
+	*gicd_isenabler_addr(GICD_BASE, n) = (1u << bit);
 }
 
 void irq_init(void) {
@@ -96,10 +139,11 @@ void irq_init(void) {
 	*gicc_pmr_addr(GICC_BASE) = 0xFF;
 	*gicc_bpr_addr(GICC_BASE) = 0;
 
-	// Enable devices
-	__enable_timer_ppi();
+	// Program devices (group/prio/route/trigger and set-enable)
+	__enable_timer_irq();
+	__enable_uart_irq();
 
-	// Enable distributor and CPU interface again.
+	// Enable distributor and CPU interface (single-group NS-only flow)
 	printk("irq0: enabling CPU interface and distributor\n");
 	*gicd_ctrl_addr(GICD_BASE) = 1;
 	*gicc_ctrl_addr(GICC_BASE) = 1;
@@ -108,13 +152,14 @@ void irq_init(void) {
 
 	// Start IRQ for other subsystems
 	sched_clock_init_irq();
+	uart_init_irq();
 }
 
 void irq_handle(uintptr_t frame) {
 	(void)frame;
 
 	// Acknowledge the IRQ and get the context
-	uint32_t iar = *gicc_iar(GICC_BASE);
+	uint32_t iar = *gicc_iar_addr(GICC_BASE);
 	dsb_sy();
 
 	// Extract the interrupt ID from the context
@@ -132,7 +177,9 @@ void irq_handle(uintptr_t frame) {
 		break;
 
 	default:
-		printk("unhandled IRQ %u\n", irqid);
+		// Mask unexpected lines so they can't storm while debugging.
+		*gicd_icenabler_addr(GICD_BASE, (irqid / 32)) = (1u << (irqid % 32));
+		break;
 	}
 
 	// We're done handling this interrupt
