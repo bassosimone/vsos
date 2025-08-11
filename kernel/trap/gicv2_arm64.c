@@ -2,13 +2,14 @@
 // Purpose: GICv2 driver
 // SPDX-License-Identifier: MIT
 
-#include <kernel/asm/arm64.h>	// for dsb_sy, etc.
-#include <kernel/boot/boot.h>	// for __vectors_el1
-#include <kernel/core/printk.h> // for printk.
-#include <kernel/irq/irq.h>	// for irq_init
-#include <kernel/mm/mm.h>	// for mmap_identity
-#include <kernel/sched/sched.h> // for sched_clock_irq
-#include <kernel/tty/uart.h>	// for uart_init_irq
+#include <kernel/asm/arm64.h>	    // for dsb_sy, etc.
+#include <kernel/boot/boot.h>	    // for __vectors_el1
+#include <kernel/core/printk.h>	    // for printk.
+#include <kernel/mm/mm.h>	    // for mmap_identity
+#include <kernel/sched/sched.h>	    // for sched_clock_irq
+#include <kernel/trap/trap.h>	    // for trap_init_mm
+#include <kernel/trap/trap_arm64.h> // for __trap_isr
+#include <kernel/tty/uart.h>	    // for uart_init_irq
 
 // Base and limit memory addresses for the GICC.
 #define GICC_BASE 0x08010000UL
@@ -24,7 +25,7 @@
 // The UART0 (PL011) on QEMU virt
 #define UART0_INTID 33u
 
-void irq_init_mm(void) {
+void trap_init_mm(void) {
 	printk("irq0: mmap_identity GICD_BASE %llx - %llx\n", GICD_BASE, GICD_LIMIT);
 	mmap_identity(GICD_BASE, GICD_LIMIT, MM_FLAG_DEVICE | MM_FLAG_WRITE);
 
@@ -123,7 +124,7 @@ static inline void __enable_uart_irq(void) {
 	*gicd_isenabler_addr(GICD_BASE, n) = (1u << bit);
 }
 
-void irq_init(void) {
+void trap_init_irqs(void) {
 	// Set the vector interrupt table
 	msr_vbar_el1((uint64_t)__vectors_el1);
 	isb();
@@ -155,7 +156,7 @@ void irq_init(void) {
 	uart_init_irqs();
 }
 
-void irq_handle(uintptr_t frame) {
+void __trap_isr(struct trap_frame *frame) {
 	(void)frame;
 
 	// Acknowledge the IRQ and get the context

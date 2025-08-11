@@ -88,7 +88,7 @@ __vectors_el1:
     .global __arm64_handle_el1h_irq
     .align 4
     .type __arm64_handle_el1h_irq, %function
-    .extern irq_handle
+    .extern __trap_isr
 __arm64_handle_el1h_irq:
     // Interrupts are disabled when we enter here and we keep
     // them disabled for the whole handler duration.
@@ -149,7 +149,7 @@ __arm64_handle_el1h_irq:
 
     // Handle the interrupt passing the frame as context
     mov x0, sp
-    bl  irq_handle
+    bl  __trap_isr
 
     // Restore floating point control/status registers
     ldr x20, [sp, #792]
@@ -284,14 +284,14 @@ __arm64_handle_syscall:
     mov x0, sp
     b sched_return_to_user
 
-    // void irq_restore_user_and_eret(uintptr_t trapframe);
+    // void trap_restore_user_and_eret(uintptr_t trapframe);
     //
     // Handles syscalls.
     .section .text
-    .global irq_restore_user_and_eret
+    .global trap_restore_user_and_eret
     .align 4
-    .type irq_restore_user_and_eret, %function
-irq_restore_user_and_eret:
+    .type trap_restore_user_and_eret, %function
+trap_restore_user_and_eret:
     // Adjust the kernel stack back
     add sp, x0, #800
 

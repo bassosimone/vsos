@@ -6,9 +6,9 @@
 #include <kernel/boot/boot.h>	// whole subsystem API
 #include <kernel/core/panic.h>	// for panic
 #include <kernel/core/printk.h> // for printk
-#include <kernel/irq/irq.h>	// for irq_init
 #include <kernel/mm/mm.h>	// for mm_init
 #include <kernel/sched/sched.h> // whole subsystem API
+#include <kernel/trap/trap.h>	// for trap_init_irqs
 #include <kernel/tty/uart.h>	// for uart_init_early
 
 #include <string.h>    // for memset
@@ -67,7 +67,7 @@ static void __kernel_zygote(void *opaque) {
 	// This will also initialize IRQs for other subsystems.
 	//
 	// Needs to happen after we have threads.
-	irq_init();
+	trap_init_irqs();
 
 	// 2. create a thread for saying hello to the world
 	int64_t tid = sched_thread_start(thread_hello, /* opaque */ 0, /* flags */ 0);

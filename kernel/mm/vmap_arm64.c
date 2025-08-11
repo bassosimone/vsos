@@ -7,8 +7,8 @@
 #include <kernel/boot/boot.h>	// for __kernel_base
 #include <kernel/core/assert.h> // for KERNEL_ASSERT
 #include <kernel/core/printk.h> // for printk
-#include <kernel/irq/irq.h>	// for irq_init_mm
 #include <kernel/mm/mm.h>	// for mm_phys_page_alloc_many
+#include <kernel/trap/trap.h>	// for trap_init_mm
 #include <kernel/tty/uart.h>	// for uart_init_mm
 
 // We're using identity mapping in this kernel
@@ -187,7 +187,7 @@ void mm_init(void) {
 	mm_map_identity(kernel_root_table, (uint64_t)__stack_bottom, (uint64_t)__stack_top, MM_FLAG_WRITE);
 
 	// 3) Map devices we actually use
-	irq_init_mm();
+	trap_init_mm();
 	uart_init_mm();
 
 	// 4) MAIR: idx0 Normal WBWA, idx1 Device-nGnRE

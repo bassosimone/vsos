@@ -8,9 +8,9 @@
 #include <kernel/core/panic.h>	  // for panic
 #include <kernel/core/printk.h>	  // for printk
 #include <kernel/core/spinlock.h> // for struct spinlock
-#include <kernel/irq/irq.h>	  // for irq_restore_user_and_eret
 #include <kernel/sched/sched.h>	  // the subsystem's API
 #include <kernel/sched/switch.h>  // switching threads
+#include <kernel/trap/trap.h>	  // for trap_restore_user_and_eret
 
 #include <string.h>    // for memset
 #include <sys/errno.h> // for EAGAIN
@@ -422,7 +422,7 @@ int64_t sched_thread_join(int64_t tid, void **retvalptr) {
 	// TODO(bassosimone): ensure the trapframe is in the stack bounds?
 
 	// The venerable `call/cc` is alive and fights alongside us
-	irq_restore_user_and_eret(current->trapframe);
+	trap_restore_user_and_eret(current->trapframe);
 
 	// Just make sure we don't arrive here
 	__builtin_unreachable();
