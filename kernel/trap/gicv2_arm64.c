@@ -254,18 +254,32 @@ void trap_init_irqs(void) {
 	uart_init_irqs();
 }
 
+// Returns true and a valid `iar` or false if the IRQ is a spurious one.
+//
+// Both `iar` and `id` will always be initialized to some value.
+static inline bool gicv2_acknowledge_irq(struct gicv2_device *dev, uint32_t *iar, uint32_t *id) {
+	// Acknowledge the IRQ and get the context
+	*iar = mmio_read_uint32(gicc_iar_addr(dev->gicc_base));
+
+	// Extract the interrupt ID from the context
+	*id = *iar & 0x3FFu;
+
+	// Handle spurious IRQ
+	return *id < 1020;
+}
+
+// Notify that we are done handling this interrupt.
+static inline void gicv2_end_of_interrupt(struct gicv2_device *dev, uint32_t iar) {
+	mmio_write_uint32(gicc_eoir_addr(dev->gicc_base), iar);
+}
+
 void __trap_isr(struct trap_frame *frame) {
 	(void)frame;
 
 	// Acknowledge the IRQ and get the context
-	uint32_t iar = *gicc_iar_addr(GICC_BASE);
-	dsb_sy();
-
-	// Extract the interrupt ID from the context
-	uint32_t irqid = iar & 0x3FFu;
-
-	// Handle spurious IRQ
-	if (irqid >= 1020) {
+	uint32_t iar = 0;
+	uint32_t irqid = 0;
+	if (!gicv2_acknowledge_irq(&irq0, &iar, &irqid)) {
 		return;
 	}
 
@@ -286,7 +300,5 @@ void __trap_isr(struct trap_frame *frame) {
 	}
 
 	// We're done handling this interrupt
-	*gicc_eoir_addr(GICC_BASE) = iar;
-	dsb_sy();
-	isb();
+	gicv2_end_of_interrupt(&irq0, iar);
 }
