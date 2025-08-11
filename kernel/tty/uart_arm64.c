@@ -251,8 +251,7 @@ static inline ssize_t __uart_recv(struct pl011_device *dev, char *buf, size_t co
 	}
 }
 
-static inline ssize_t
-___uart_send(struct pl011_device *dev, uintptr_t base, const char *buf, size_t count, uint32_t flags) {
+static inline ssize_t ___uart_send(struct pl011_device *dev, const char *buf, size_t count, uint32_t flags) {
 	// Ensure we're not going to overflow the return value
 	count = (count <= SSIZE_MAX) ? count : SSIZE_MAX;
 
@@ -271,8 +270,8 @@ ___uart_send(struct pl011_device *dev, uintptr_t base, const char *buf, size_t c
 
 		// Awesome, now send as much as possible until the
 		// device tells us that it has enough data
-		while (__uart_writable(base) && tot < count) {
-			mmio_write_uint32(dr_addr(base), (uint32_t)((uint8_t)buf[tot++]));
+		while (__uart_writable(dev->base) && tot < count) {
+			mmio_write_uint32(dr_addr(dev->base), (uint32_t)((uint8_t)buf[tot++]));
 		}
 
 		// If everything has been sent, our job is done
@@ -296,7 +295,8 @@ ___uart_send(struct pl011_device *dev, uintptr_t base, const char *buf, size_t c
 		}
 
 		// Enable the interrupt again
-		mmio_write_uint32(imsc_addr(base), (mmio_read_uint32(imsc_addr(base)) | UARTINT_TX));
+		mmio_write_uint32(imsc_addr(dev->base),
+				  (mmio_read_uint32(imsc_addr(dev->base)) | UARTINT_TX));
 
 		// Release the spinlock and wait for writability.
 		//
@@ -335,12 +335,8 @@ void uart_irq(void) {
 	__uart_irq_base(uart0.base);
 }
 
-static inline ssize_t __uart_send(uintptr_t base, const char *buf, size_t count, uint32_t flags) {
-	return ___uart_send(&uart0, base, buf, count, flags);
-}
-
 ssize_t uart_send(const char *buf, size_t count, uint32_t flags) {
-	return __uart_send(uart0.base, buf, count, flags);
+	return ___uart_send(&uart0, buf, count, flags);
 }
 
 ssize_t uart_recv(char *buf, size_t count, uint32_t flags) {
