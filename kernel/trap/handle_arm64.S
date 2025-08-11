@@ -1,4 +1,4 @@
-    // File: kernel/asm/handle_arm64.S
+    // File: kernel/trap/handle_arm64.S
     // Purpose: ARM64 trap handlers implementation
     // SPDX-License-Identifier: MIT
 
@@ -198,7 +198,7 @@ __trap_handle_synchronous:
     mov x0, sp
     mrs x1, esr_el1
     mrs x2, far_el1
-    bl  __syscall_handle
+    bl  __trap_ssr
 
     // Tail call the code to return to user space including
     // possibly performing a context switch
@@ -207,7 +207,7 @@ __trap_handle_synchronous:
 
     // void trap_restore_user_and_eret(uintptr_t trapframe);
     //
-    // Handles syscalls.
+    // Handles returning from userspace from traps.
     .section .text
     .global trap_restore_user_and_eret
     .align 4

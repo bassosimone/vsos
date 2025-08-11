@@ -8,6 +8,7 @@
 
 intptr_t
 syscall(uintptr_t num, uintptr_t a0, uintptr_t a1, uintptr_t a2, uintptr_t a3, uintptr_t a4, uintptr_t a5) {
+	// Keep in sync with `./kernel/trap/trap_arm64.c`
 	register uintptr_t x8 __asm__("x8") = num;
 	register intptr_t x0 __asm__("x0") = a0;
 	register uintptr_t x1 __asm__("x1") = a1;

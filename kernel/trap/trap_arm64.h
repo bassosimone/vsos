@@ -30,7 +30,12 @@ static_assert(__builtin_offsetof(struct trap_frame, fpsr) == 792, "fpsr offset")
 
 // Generic interrupt service routine.
 //
-// Called by the interrupt handler written in assembly.
+// Called by the trap handlers written in assembly.
 void __trap_isr(struct trap_frame *frame);
+
+// Generic synchronous service routine.
+//
+// Called by the trap handlers written in assembly.
+void __trap_ssr(struct trap_frame *frame, uint64_t esr, uint64_t far);
 
 #endif // KERNEL_TRAP_TRAP_ARM64_H

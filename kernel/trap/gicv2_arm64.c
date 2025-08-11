@@ -1,4 +1,4 @@
-// File: kernel/irq/gicv2_arm64.c
+// File: kernel/trap/gicv2_arm64.c
 // Purpose: GICv2 driver
 // SPDX-License-Identifier: MIT
 

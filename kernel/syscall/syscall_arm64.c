@@ -2,32 +2,13 @@
 // Purpose: system calls
 // SPDX-License-Identifier: MIT
 
-#include <kernel/syscall/syscall.h> // for SYS_write
-#include <kernel/trap/trap_arm64.h> // for struct trap_frame
-#include <kernel/tty/uart.h>	    // for uart_read
+#include <kernel/tty/uart.h> // for uart_read
 
-#include <sys/errno.h> // for EBADF
-#include <sys/types.h> // for uint64_t
+#include <sys/errno.h>	 // for EBADF
+#include <sys/syscall.h> // for SYS_write
+#include <sys/types.h>	 // for uint64_t
 
-// Returns the syscall from the x8 register just like on Linux
-static inline uint64_t sysno_from_regs(struct trap_frame *frame) {
-	return frame->x[8];
-}
-
-// Return the first syscall argument from the registers
-static inline uint64_t arg0(struct trap_frame *frame) {
-	return frame->x[0];
-}
-
-// Return the second syscall argument from the registers
-static inline uint64_t arg1(struct trap_frame *frame) {
-	return frame->x[1];
-}
-
-// Return the third syscall argument from the registers
-static inline uint64_t arg2(struct trap_frame *frame) {
-	return frame->x[2];
-}
+#include <unistd.h> // for syscall
 
 // Implement the read system call.
 static uint64_t sys_read(uint64_t a0, uint64_t a1, uint64_t a2) {
@@ -67,23 +48,20 @@ static uint64_t sys_write(uint64_t a0, uint64_t a1, uint64_t a2) {
 	}
 }
 
-void __syscall_handle(uint64_t rframe, uint64_t esr, uint64_t far) {
-	// TODO(bassosimone): we should use these
-	(void)esr;
-	(void)far;
+intptr_t
+syscall(uintptr_t num, uintptr_t a0, uintptr_t a1, uintptr_t a2, uintptr_t a3, uintptr_t a4, uintptr_t a5) {
+	(void)a3;
+	(void)a4;
+	(void)a5;
 
-	struct trap_frame *frame = (struct trap_frame *)rframe;
-	switch (sysno_from_regs(frame)) {
+	switch (num) {
 	case SYS_read:
-		frame->x[0] = sys_read(arg0(frame), arg1(frame), arg2(frame));
-		break;
+		return sys_read(a0, a1, a2);
 
 	case SYS_write:
-		frame->x[0] = sys_write(arg0(frame), arg1(frame), arg2(frame));
-		break;
+		return sys_write(a0, a1, a2);
 
 	default:
-		frame->x[0] = (uint64_t)-ENOSYS;
-		break;
+		return -ENOSYS;
 	}
 }

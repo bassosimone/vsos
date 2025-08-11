@@ -1,4 +1,4 @@
-    // File: kernel/asm/vector_arm64.S
+    // File: kernel/trap/vector_arm64.S
     // Purpose: ARM64 trap vectors definition
     // SPDX-License-Identifier: MIT
 
