@@ -170,20 +170,20 @@ static inline volatile uint32_t *mis_addr(uintptr_t base) {
 }
 
 // Service the IRQ for the given base UART addr.
-static inline void ___uart_irq_base(struct pl011_device *dev, uintptr_t base) {
-	uint32_t mis = mmio_read_uint32(mis_addr(base));
+static inline void ___uart_irq_base(struct pl011_device *dev) {
+	uint32_t mis = mmio_read_uint32(mis_addr(dev->base));
 
 	// Handle the case of the UART being readable
 	if ((mis & (UARTINT_RX | UARTINT_RT | UARTINT_OE)) != 0) {
 		// Drain the RX FIFO first including per-byte flags
-		while (__uart_readable(base)) {
-			uint16_t value = (uint16_t)(mmio_read_uint32(dr_addr(base)) & 0x0FFF);
+		while (__uart_readable(dev->base)) {
+			uint16_t value = (uint16_t)(mmio_read_uint32(dr_addr(dev->base)) & 0x0FFF);
 			(void)ringbuf_push(&dev->__rxbuf, value);
 		}
 
 		// Clear RX-related causes and stop the interrupt from firing
 		uint32_t mask = UARTINT_RX | UARTINT_RT | UARTINT_FE | UARTINT_PE | UARTINT_BE | UARTINT_OE;
-		mmio_write_uint32(icr_addr(base), mask);
+		mmio_write_uint32(icr_addr(dev->base), mask);
 
 		// Wake up any sleeping thread
 		sched_thread_resume_all(SCHED_THREAD_WAIT_UART_READABLE);
@@ -192,10 +192,11 @@ static inline void ___uart_irq_base(struct pl011_device *dev, uintptr_t base) {
 	// Handle the case of the UART being writable.
 	if ((mis & UARTINT_TX) != 0) {
 		// Acknowledge the TX interrupt
-		mmio_write_uint32(icr_addr(base), UARTINT_TX);
+		mmio_write_uint32(icr_addr(dev->base), UARTINT_TX);
 
 		// Mask the interrupt to avoid level-triggered interrupt storms.
-		mmio_write_uint32(imsc_addr(base), (mmio_read_uint32(imsc_addr(base)) & ~UARTINT_TX));
+		mmio_write_uint32(imsc_addr(dev->base),
+				  (mmio_read_uint32(imsc_addr(dev->base)) & ~UARTINT_TX));
 
 		// Let user space know it can send more
 		sched_thread_resume_all(SCHED_THREAD_WAIT_UART_WRITABLE);
@@ -327,12 +328,8 @@ void uart_init_irq(void) {
 	__uart_init_irq_base(&uart0);
 }
 
-static inline void __uart_irq_base(uintptr_t base) {
-	___uart_irq_base(&uart0, base);
-}
-
 void uart_irq(void) {
-	__uart_irq_base(uart0.base);
+	___uart_irq_base(&uart0);
 }
 
 ssize_t uart_send(const char *buf, size_t count, uint32_t flags) {
