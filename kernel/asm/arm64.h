@@ -190,4 +190,19 @@ static inline void mmio_write_uint32(volatile uint32_t *address, uint32_t value)
 	*address = value;
 }
 
+// Puts the CPU in low-power state until an interrupt occurs.
+static inline void cpu_sleep_until_interrupt(void) {
+	wfi();
+}
+
+// Disables interrupts unconditionally.
+static inline void local_irq_disable(void) {
+	msr_daifset_2();
+}
+
+// Enables interrupts unconditionally.
+static inline void local_irq_enable(void) {
+	msr_daifclr_2();
+}
+
 #endif // KERNEL_ASM_ARM64

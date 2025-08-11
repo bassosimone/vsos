@@ -1,5 +1,5 @@
     // File: kernel/sched/switch_arm64.S
-    // Purpose: ARM64 thread switching code
+    // Purpose: ARM64 kernel thread switching code
     // SPDX-License-Identifier: MIT
 
     .section .text
