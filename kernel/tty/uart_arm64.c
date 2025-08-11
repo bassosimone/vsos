@@ -101,14 +101,16 @@ static inline volatile uint32_t *ifls_addr(uintptr_t base) {
 }
 
 struct pl011_device {
+	uintptr_t base;
 	volatile uint64_t __has_interrupts;
 	struct ringbuf __rxbuf;
 	struct spinlock __rxlock;
 	struct spinlock __txlock;
 };
 
-static void pl011_init_struct(struct pl011_device *dev) {
+static void pl011_init_struct(struct pl011_device *dev, uintptr_t base) {
 	__bzero_unaligned(dev, sizeof(*dev));
+	dev->base = base;
 }
 
 static inline void set_has_interrupts(struct pl011_device *dev) {
@@ -310,12 +312,13 @@ ___uart_send(struct pl011_device *dev, uintptr_t base, const char *buf, size_t c
 static struct pl011_device uart0;
 
 void uart_init_early(void) {
-	pl011_init_struct(&uart0);
-	uart_init_early_base("uart0", UART0_BASE);
+	pl011_init_struct(&uart0, UART0_BASE);
+#undef UART0_BASE
+	uart_init_early_base("uart0", uart0.base);
 }
 
 void uart_init_mm(void) {
-	uart_init_mm_base("uart0", UART0_BASE);
+	uart_init_mm_base("uart0", uart0.base);
 }
 
 static inline void uart_init_irq_base(const char *device, uintptr_t base) {
@@ -323,7 +326,7 @@ static inline void uart_init_irq_base(const char *device, uintptr_t base) {
 }
 
 void uart_init_irq(void) {
-	uart_init_irq_base("uart0", UART0_BASE);
+	uart_init_irq_base("uart0", uart0.base);
 }
 
 static inline void __uart_irq_base(uintptr_t base) {
@@ -331,7 +334,7 @@ static inline void __uart_irq_base(uintptr_t base) {
 }
 
 void uart_irq(void) {
-	__uart_irq_base(UART0_BASE);
+	__uart_irq_base(uart0.base);
 }
 
 static inline ssize_t __uart_send(uintptr_t base, const char *buf, size_t count, uint32_t flags) {
@@ -339,7 +342,7 @@ static inline ssize_t __uart_send(uintptr_t base, const char *buf, size_t count,
 }
 
 ssize_t uart_send(const char *buf, size_t count, uint32_t flags) {
-	return __uart_send(UART0_BASE, buf, count, flags);
+	return __uart_send(uart0.base, buf, count, flags);
 }
 
 ssize_t uart_recv(char *buf, size_t count, uint32_t flags) {
