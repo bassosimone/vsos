@@ -7,39 +7,20 @@
 #include <sys/param.h> // for HZ
 #include <sys/types.h> // for uint64_t
 
-// Interrupt handler for the scheduler clock.
+// Interrupt service routine for the scheduler clock.
 //
 // Called from the generic IRQ handler.
 //
 // Will must acknowledge the IRQ, re-arm the timer, and
 // perform all the related scheduler bookkeping.
-void sched_clock_irq(void);
+void sched_clock_isr(void);
 
 // Initialize the timer to interrupt every HZ.
 //
 // Called by the IRQ subsystem.
 //
 // Do not use outside of this subsystem.
-void sched_clock_init_irq(void);
-
-// Returns true if we should trigger a reschedule.
-//
-// Called by the scheduler internals.
-//
-// Do not use outside of this subsystem.
-bool __sched_should_reschedule(void);
-
-// Returns the current value of the scheduler jiffies.
-//
-// The jiffies count the number of clock interrupts.
-//
-// The `memoryorder` argument specifies the atomic memory
-// order for accessing the underlying variable.
-//
-// From normal kernel thread context `__ATOMIC_RELAXED`
-// is sufficient. From IRQ or SMP contexts, instead, one
-// should use the `__ATOMIC_ACQUIRE` constraint.
-uint64_t sched_jiffies(int memoryorder);
+void sched_clock_init_irqs(void);
 
 // The thread can be joined and must not be automatically reaped.
 #define SCHED_THREAD_FLAG_JOINABLE (1 << 0)

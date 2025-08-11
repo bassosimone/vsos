@@ -151,7 +151,7 @@ void irq_init(void) {
 	isb();
 
 	// Start IRQ for other subsystems
-	sched_clock_init_irq();
+	sched_clock_init_irqs();
 	uart_init_irqs();
 }
 
@@ -173,7 +173,7 @@ void irq_handle(uintptr_t frame) {
 	// Handle each IRQ type
 	switch (irqid) {
 	case IRQ_PPI_CNTP:
-		sched_clock_irq();
+		sched_clock_isr();
 		break;
 
 	case UART0_INTID:

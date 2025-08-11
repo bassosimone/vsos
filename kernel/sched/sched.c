@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 #include <kernel/asm/asm.h>	  // for cpu_sleep_until_interrupt
+#include <kernel/clock/clock.h>	  // for clock_tick_start
 #include <kernel/core/assert.h>	  // for KERNEL_ASSERT
 #include <kernel/core/panic.h>	  // for panic
 #include <kernel/core/printk.h>	  // for printk
@@ -87,6 +88,31 @@ static size_t fair_id = 0;
 // List of pending events since the last schedule occurred.
 static uint64_t events = 0;
 
+// Flag indicating we should reschedule
+static uint64_t need_sched = 0;
+
+// Number of ticks since the system has booted.
+static volatile uint64_t jiffies = 0;
+
+void sched_clock_init_irqs(void) {
+	clock_tick_start();
+}
+
+void sched_clock_isr(void) {
+	__atomic_fetch_add(&jiffies, 1, __ATOMIC_RELEASE);
+	sched_thread_resume_all(SCHED_THREAD_WAIT_TIMER);
+	clock_tick_rearm();
+	__atomic_store_n(&need_sched, 1, __ATOMIC_RELEASE);
+}
+
+static inline bool __sched_should_reschedule(void) {
+	return __atomic_exchange_n(&need_sched, 0, __ATOMIC_ACQUIRE) != 0;
+}
+
+static inline uint64_t __sched_jiffies(int memoryorder) {
+	return __atomic_load_n(&jiffies, memoryorder);
+}
+
 void __sched_trampoline(void) {
 	current->main(current->opaque);
 	sched_thread_exit(0);
@@ -145,7 +171,7 @@ static int64_t __sched_thread_start_locked(sched_thread_main_t *main, void *opaq
 	candidate->flags = flags;
 
 	// 10. set the thread's epoch
-	candidate->epoch = sched_jiffies(__ATOMIC_RELAXED);
+	candidate->epoch = __sched_jiffies(__ATOMIC_RELAXED);
 
 	// 11. return the thread ID.
 	return candidate->id;
@@ -421,10 +447,10 @@ void sched_thread_resume_all(uint64_t channels) {
 }
 
 void __sched_thread_sleep(uint64_t jiffies) {
-	uint64_t start = sched_jiffies(__ATOMIC_RELAXED);
+	uint64_t start = __sched_jiffies(__ATOMIC_RELAXED);
 	for (;;) {
 		sched_thread_suspend(SCHED_THREAD_WAIT_TIMER);
-		uint64_t current = sched_jiffies(__ATOMIC_RELAXED);
+		uint64_t current = __sched_jiffies(__ATOMIC_RELAXED);
 		if (current - start >= jiffies) {
 			return;
 		}
