@@ -45,12 +45,6 @@ extern char __free_ram_end[];
 // Location of the interrupt vectors in memory.
 extern char __vectors_el1[];
 
-// The initial naked function invoked by the bootloader.
-__attribute__((section(".text.boot"))) __attribute__((naked)) void boot(void);
-
-// The machine dependent initialization function.
-[[noreturn]] void kernel_main(void);
-
 // The machine independent initialization function.
 [[noreturn]] void __kernel_main(void);
 
