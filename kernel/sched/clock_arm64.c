@@ -2,11 +2,8 @@
 // Purpose: ARM64 system clock management
 // SPDX-License-Identifier: MIT
 
-#include <kernel/asm/arm64.h>	// for dsb_sy, etc.
-#include <kernel/core/printk.h> // for printk
+#include <kernel/clock/clock.h> // for clock_tick_start
 #include <kernel/sched/sched.h> // subsystem API
-
-#include <sys/param.h> // for HZ
 
 // Flag indicating we should reschedule
 static uint64_t need_sched = 0;
@@ -14,34 +11,14 @@ static uint64_t need_sched = 0;
 // Number of ticks since the system has booted.
 static volatile uint64_t jiffies = 0;
 
-// Common function invoked both by sched_clock_init and sched_clock_irq
-static void __sched_clock_rearm() {
-	// Get the number of ticks per second used by the hardware.
-	uint64_t freq = mrs_cntfrq_el0();
-
-	// Scale the number to obtain a frequency of HZ Hertz.
-	uint64_t ticks_per_int = freq / HZ;
-
-	// Program first expiry relative to now
-	msr_cntp_tval_el0(ticks_per_int);
-
-	// Enable timer and unmask its interrupt (bit 0 = enable, bit 1 = IMASK)
-	msr_cntp_ctl_el0(1);
-
-	// Ensure data consistency and flush instruction buffer.
-	dsb_sy();
-	isb();
-}
-
 void sched_clock_init_irq(void) {
-	printk("clock0: ticking %lld times per second\n", HZ);
-	__sched_clock_rearm();
+	clock_tick_start();
 }
 
 void sched_clock_irq(void) {
 	__atomic_fetch_add(&jiffies, 1, __ATOMIC_RELEASE);
 	sched_thread_resume_all(SCHED_THREAD_WAIT_TIMER);
-	__sched_clock_rearm();
+	clock_tick_rearm();
 	__atomic_store_n(&need_sched, 1, __ATOMIC_RELEASE);
 }
 
