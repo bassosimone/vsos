@@ -52,11 +52,11 @@ gicv2_init_struct(struct gicv2_device *dev, uintptr_t gicc_base, uintptr_t gicd_
 // Requires gicv2_init_struct first.
 static inline void gicv2_init_mm(struct gicv2_device *dev) {
 	uintptr_t gicc_limit = gicc_memory_limit(dev->gicc_base);
-	printk("%s: mmap_identity GICC_BASE %llx - %llx\n", dev->name, dev->gicc_base, gicc_limit);
+	printk("%s: gicv2: mmap_identity GICC_BASE %llx - %llx\n", dev->name, dev->gicc_base, gicc_limit);
 	mmap_identity(dev->gicc_base, gicc_limit, MM_FLAG_DEVICE | MM_FLAG_WRITE);
 
 	uintptr_t gicd_limit = gicd_memory_limit(dev->gicd_base);
-	printk("%s: mmap_identity GICD_BASE %llx - %llx\n", dev->name, dev->gicd_base, gicd_limit);
+	printk("%s: gicv2: mmap_identity GICD_BASE %llx - %llx\n", dev->name, dev->gicd_base, gicd_limit);
 	mmap_identity(dev->gicd_base, gicd_limit, MM_FLAG_DEVICE | MM_FLAG_WRITE);
 }
 
@@ -171,21 +171,32 @@ static inline void __enable_uart_irq(void) {
 	*gicd_isenabler_addr(GICD_BASE, n) = (1u << bit);
 }
 
+// Returns the GICv2 into a know state with all interrupts disabled.
+//
+// Should be invoked first, before starting to program the device.
+static inline void gicv2_reset(struct gicv2_device *dev) {
+	printk("%s: gicv2: disabling CPU interface\n", dev->name);
+	mmio_write_uint32(gicc_ctrl_addr(dev->gicc_base), 0);
+
+	printk("%s: gicv2: disabling distributor\n", dev->name);
+	mmio_write_uint32(gicd_ctrl_addr(dev->gicd_base), 0);
+
+	printk("%s: gicv2: setting priority mask to 0xFF\n", dev->name);
+	mmio_write_uint32(gicc_pmr_addr(dev->gicc_base), 0xFF);
+
+	printk("%s: gicv2: disabling binary point split\n", dev->name);
+	mmio_write_uint32(gicc_bpr_addr(dev->gicc_base), 0);
+
+	// TODO(bassosimone): clear and disable all SPIs (what does SPI mean?)
+}
+
 void trap_init_irqs(void) {
 	// Set the vector interrupt table
 	msr_vbar_el1((uint64_t)__vectors_el1);
 	isb();
 
-	// Disable the CPU interface and the distributor.
-	printk("irq0: disabling CPU interface and distributor\n");
-	*gicc_ctrl_addr(GICC_BASE) = 0;
-	*gicd_ctrl_addr(GICD_BASE) = 0;
-	dsb_sy();
-
-	// Set priority mask to allow all interrupts and disable binary point split.
-	printk("irq0: setting priority mask to allow all interrupts\n");
-	*gicc_pmr_addr(GICC_BASE) = 0xFF;
-	*gicc_bpr_addr(GICC_BASE) = 0;
+	// Reset interrupt controller
+	gicv2_reset(&irq0);
 
 	// Program devices (group/prio/route/trigger and set-enable)
 	__enable_timer_irq();
