@@ -15,6 +15,8 @@
 #include <sys/errno.h>
 #include <sys/fcntl.h>
 
+#include <string.h>
+
 // Returns the limit of the MMIO range given a specific base.
 static inline uintptr_t memory_limit(uintptr_t base) {
 	return base + 0x1000ULL;
@@ -98,18 +100,29 @@ static inline volatile uint32_t *ifls_addr(uintptr_t base) {
 	return (volatile uint32_t *)(base + 0x34);
 }
 
-// Change our behavior once we have setup interrupts.
-static volatile uint64_t __has_interrupts = 0;
+struct pl011_device {
+	volatile uint64_t __has_interrupts;
+	struct ringbuf __rxbuf;
+	struct spinlock __rxlock;
+	struct spinlock __txlock;
+};
 
-static inline void set_has_interrupts(void) {
-	__atomic_store_n(&__has_interrupts, 1, __ATOMIC_RELEASE);
+static void pl011_init_struct(struct pl011_device *dev) {
+	// Nothing to do for now. Also, doing a memset here is potentially
+	// dangerous if the structure is not aligned and memset is using
+	// aligned instructions that cause a data abort.
+	(void)dev;
 }
 
-static inline bool has_enabled_interrupts(void) {
-	return __atomic_load_n(&__has_interrupts, __ATOMIC_ACQUIRE) != 0;
+static inline void set_has_interrupts(struct pl011_device *dev) {
+	__atomic_store_n(&dev->__has_interrupts, 1, __ATOMIC_RELEASE);
 }
 
-static inline void uart_init_irq_base(const char *device, uintptr_t base) {
+static inline bool has_enabled_interrupts(struct pl011_device *dev) {
+	return __atomic_load_n(&dev->__has_interrupts, __ATOMIC_ACQUIRE) != 0;
+}
+
+static inline void __uart_init_irq_base(struct pl011_device *dev, const char *device, uintptr_t base) {
 	// Enable the FIFO behavior
 	mmio_write_uint32(clr_h_addr(base), (mmio_read_uint32(clr_h_addr(base)) | UARTLCR_H_FEN));
 
@@ -126,7 +139,7 @@ static inline void uart_init_irq_base(const char *device, uintptr_t base) {
 	printk("%s: UARTIMSC |= RX | RT | OE\n", device);
 
 	// Ensure we all know we have interrupts.
-	set_has_interrupts();
+	set_has_interrupts(dev);
 }
 
 // UARTFR: flags register.
@@ -155,11 +168,8 @@ static inline volatile uint32_t *mis_addr(uintptr_t base) {
 	return (volatile uint32_t *)(base + 0x40);
 }
 
-// Ring buffer for receiving characters from the UART.
-static struct ringbuf rxbuf;
-
 // Service the IRQ for the given base UART addr.
-static inline void __uart_irq_base(uintptr_t base) {
+static inline void ___uart_irq_base(struct pl011_device *dev, uintptr_t base) {
 	uint32_t mis = mmio_read_uint32(mis_addr(base));
 
 	// Handle the case of the UART being readable
@@ -167,7 +177,7 @@ static inline void __uart_irq_base(uintptr_t base) {
 		// Drain the RX FIFO first including per-byte flags
 		while (__uart_readable(base)) {
 			uint16_t value = (uint16_t)(mmio_read_uint32(dr_addr(base)) & 0x0FFF);
-			(void)ringbuf_push(&rxbuf, value);
+			(void)ringbuf_push(&dev->__rxbuf, value);
 		}
 
 		// Clear RX-related causes and stop the interrupt from firing
@@ -191,10 +201,7 @@ static inline void __uart_irq_base(uintptr_t base) {
 	}
 }
 
-// Spinlock protecting the receive path.
-static struct spinlock rxlock;
-
-ssize_t uart_recv(char *buf, size_t count, uint32_t flags) {
+static inline ssize_t __uart_recv(struct pl011_device *dev, char *buf, size_t count, uint32_t flags) {
 	// Defend against return value overflow
 	count = (count <= SSIZE_MAX) ? count : SSIZE_MAX;
 
@@ -208,7 +215,7 @@ ssize_t uart_recv(char *buf, size_t count, uint32_t flags) {
 
 		// Grab the spinlock to protect against multiple readers
 		// and yield here awaiting for it to become available
-		while (spinlock_try_acquire(&rxlock) != 0) {
+		while (spinlock_try_acquire(&dev->__rxlock) != 0) {
 			if ((flags & O_NONBLOCK) != 0) {
 				return (off <= 0) ? -EAGAIN : (ssize_t)off;
 			}
@@ -217,10 +224,10 @@ ssize_t uart_recv(char *buf, size_t count, uint32_t flags) {
 
 		// Attempt to read from the ring buffer
 		uint16_t data = 0;
-		bool success = ringbuf_pop(&rxbuf, &data);
+		bool success = ringbuf_pop(&dev->__rxbuf, &data);
 
 		// Drop the spinlock now that we've accessed the buffer
-		spinlock_release(&rxlock);
+		spinlock_release(&dev->__rxlock);
 
 		// Check whether we succeeded
 		if (success) {
@@ -243,10 +250,8 @@ ssize_t uart_recv(char *buf, size_t count, uint32_t flags) {
 	}
 }
 
-// Spinlock protecting the send path.
-static struct spinlock txlock;
-
-static inline ssize_t __uart_send(uintptr_t base, const char *buf, size_t count, uint32_t flags) {
+static inline ssize_t
+___uart_send(struct pl011_device *dev, uintptr_t base, const char *buf, size_t count, uint32_t flags) {
 	// Ensure we're not going to overflow the return value
 	count = (count <= SSIZE_MAX) ? count : SSIZE_MAX;
 
@@ -256,7 +261,7 @@ static inline ssize_t __uart_send(uintptr_t base, const char *buf, size_t count,
 	for (;;) {
 		// Grab the lock granting us the permission to transmit,
 		// however, be careful with O_NONBLOCK users.
-		while (spinlock_try_acquire(&txlock) != 0) {
+		while (spinlock_try_acquire(&dev->__txlock) != 0) {
 			if ((flags & O_NONBLOCK) != 0) {
 				return (tot <= 0) ? -EAGAIN : (ssize_t)tot;
 			}
@@ -271,20 +276,20 @@ static inline ssize_t __uart_send(uintptr_t base, const char *buf, size_t count,
 
 		// If everything has been sent, our job is done
 		if (tot >= count) {
-			spinlock_release(&txlock);
+			spinlock_release(&dev->__txlock);
 			return (ssize_t)tot;
 		}
 
 		// If we are nonblocking, this is the time where we'd block
 		if ((flags & O_NONBLOCK) != 0) {
-			spinlock_release(&txlock);
+			spinlock_release(&dev->__txlock);
 			return (tot <= 0) ? -EAGAIN : (ssize_t)tot;
 		}
 
 		// If we are without interrupts and we are allowed to
 		// block, the best we can do is yield the CPU.
-		if (!has_enabled_interrupts()) {
-			spinlock_release(&txlock);
+		if (!has_enabled_interrupts(dev)) {
+			spinlock_release(&dev->__txlock);
 			sched_thread_yield();
 			continue;
 		}
@@ -296,7 +301,7 @@ static inline ssize_t __uart_send(uintptr_t base, const char *buf, size_t count,
 		//
 		// As a safety net, for now, also wait for the clock to tick
 		// such that we don't get a completely frozen console.
-		spinlock_release(&txlock);
+		spinlock_release(&dev->__txlock);
 		uint64_t channels = SCHED_THREAD_WAIT_UART_WRITABLE | SCHED_THREAD_WAIT_TIMER;
 		sched_thread_suspend(channels);
 	}
@@ -305,7 +310,10 @@ static inline ssize_t __uart_send(uintptr_t base, const char *buf, size_t count,
 // PL011 UART base address in QEMU virt
 #define UART0_BASE 0x09000000
 
+static struct pl011_device uart0;
+
 void uart_init_early(void) {
+	pl011_init_struct(&uart0);
 	uart_init_early_base("uart0", UART0_BASE);
 }
 
@@ -313,14 +321,30 @@ void uart_init_mm(void) {
 	uart_init_mm_base("uart0", UART0_BASE);
 }
 
+static inline void uart_init_irq_base(const char *device, uintptr_t base) {
+	__uart_init_irq_base(&uart0, device, base);
+}
+
 void uart_init_irq(void) {
 	uart_init_irq_base("uart0", UART0_BASE);
+}
+
+static inline void __uart_irq_base(uintptr_t base) {
+	___uart_irq_base(&uart0, base);
 }
 
 void uart_irq(void) {
 	__uart_irq_base(UART0_BASE);
 }
 
+static inline ssize_t __uart_send(uintptr_t base, const char *buf, size_t count, uint32_t flags) {
+	return ___uart_send(&uart0, base, buf, count, flags);
+}
+
 ssize_t uart_send(const char *buf, size_t count, uint32_t flags) {
 	return __uart_send(UART0_BASE, buf, count, flags);
+}
+
+ssize_t uart_recv(char *buf, size_t count, uint32_t flags) {
+	return __uart_recv(&uart0, buf, count, flags);
 }
