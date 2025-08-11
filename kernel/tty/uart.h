@@ -1,11 +1,10 @@
 // File: kernel/tty/uart.h
-// Purpose: Universal-asynchronous receiver-transmitter (UART) driver interface.
+// Purpose: UART driver.
 // SPDX-License-Identifier: MIT
-// Adapted from: https://github.com/nuta/operating-system-in-1000-lines
 #ifndef KERNEL_TTY_UART_H
 #define KERNEL_TTY_UART_H
 
-#include <sys/types.h>
+#include <sys/types.h> // for size_t
 
 // Early initialization for the UART driver.
 //
@@ -20,15 +19,12 @@ void uart_init_mm(void);
 // Initialize IRQs for the UART driver.
 //
 // Called by the irq subsystem.
-void uart_init_irq(void);
+void uart_init_irqs(void);
 
 // Handle UART interrupt request.
 //
 // Called by the irq handler.
-void uart_irq(void);
-
-// The read system call using the UART.
-ssize_t uart_read(char *buffer, size_t siz);
+void uart_isr(void);
 
 // Allows reading bytes from the UART.
 //
@@ -43,9 +39,6 @@ ssize_t uart_read(char *buffer, size_t siz);
 //
 // This function blocks until interrupts are enabled.
 ssize_t uart_recv(char *buf, size_t count, uint32_t flags);
-
-// The write system call using the UART.
-ssize_t uart_write(const char *buffer, size_t siz);
 
 // Allows writing bytes to the UART.
 //

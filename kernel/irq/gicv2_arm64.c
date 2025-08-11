@@ -152,7 +152,7 @@ void irq_init(void) {
 
 	// Start IRQ for other subsystems
 	sched_clock_init_irq();
-	uart_init_irq();
+	uart_init_irqs();
 }
 
 void irq_handle(uintptr_t frame) {
@@ -177,7 +177,7 @@ void irq_handle(uintptr_t frame) {
 		break;
 
 	case UART0_INTID:
-		uart_irq();
+		uart_isr();
 		break;
 
 	default:

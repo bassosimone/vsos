@@ -41,7 +41,7 @@ static uint64_t sys_read(uint64_t a0, uint64_t a1, uint64_t a2) {
 	case 0:
 	case 1:
 	case 2:
-		return uart_read(buffer, siz);
+		return uart_recv(buffer, siz, /* flags*/ 0);
 
 	default:
 		return (uint64_t)-EBADF;
@@ -60,7 +60,7 @@ static uint64_t sys_write(uint64_t a0, uint64_t a1, uint64_t a2) {
 	case 0:
 	case 1:
 	case 2:
-		return uart_write(buffer, siz);
+		return uart_send(buffer, siz, /* flags */ 0);
 
 	default:
 		return (uint64_t)-EBADF;

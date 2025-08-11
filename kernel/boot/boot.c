@@ -48,14 +48,14 @@ static void _sleeper(void *opaque) {
 	(void)opaque;
 	for (;;) {
 		char ch = 0;
-		ssize_t n = uart_read(&ch, 1);
+		ssize_t n = uart_recv(&ch, 1, /* flags */ 0);
 		if (n != 1) {
 			continue;
 		}
 		if (ch == '\r') {
 			ch = '\n';
 		}
-		(void)uart_write(&ch, 1);
+		(void)uart_send(&ch, 1, /* flags */ 0);
 	}
 }
 
