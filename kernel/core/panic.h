@@ -8,7 +8,4 @@
 // Prints the given message and halts the kernel
 [[noreturn]] void panic(const char *fmt, ...);
 
-// Machine-dependent implementation of halting the kernel
-[[noreturn]] void __panic_halt(void);
-
 #endif // KERNEL_CORE_PANIC_H
