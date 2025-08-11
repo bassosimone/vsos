@@ -2,9 +2,9 @@
 // Purpose: system calls
 // SPDX-License-Identifier: MIT
 
-#include <kernel/irq/arm64.h>	// for struct trapframe
-#include <kernel/sys/syscall.h> // for SYS_write
-#include <kernel/tty/uart.h>	// for uart_read
+#include <kernel/irq/arm64.h>	    // for struct trapframe
+#include <kernel/syscall/syscall.h> // for SYS_write
+#include <kernel/tty/uart.h>	    // for uart_read
 
 #include <sys/errno.h> // for EBADF
 #include <sys/types.h> // for uint64_t
