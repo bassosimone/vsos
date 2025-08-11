@@ -15,6 +15,7 @@ https://github.com/nuta/operating-system-in-1000-lines).
 - [x] system-timer driver (arm64)
 - [x] virtual memory at EL1 context (arm64)
 - [x] interruptible process sleep (arm64)
+- [x] bitmap based allocator
 - [ ] `SYS_read` (arm64) - IN PROGRESS
 - [ ] `SYS_write` (arm64) - IN PROGRESS
 - [ ] initial shell (arm64) - IN PROGRESS
