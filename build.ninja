@@ -3,7 +3,7 @@
 # Purpose: Build the project
 
 rule kernel_cc
-  command = clang -I. -Iinclude -O2 -std=c23 -target aarch64-none-elf -ffreestanding -nostdlib -Wall -Wextra -c $in -o $out
+  command = clang -DARCH_ARM64 -I. -Iinclude -O2 -std=c23 -target aarch64-none-elf -ffreestanding -nostdlib -Wall -Wextra -c $in -o $out
   description = CC KERNEL $out
 
 rule kernel_asm

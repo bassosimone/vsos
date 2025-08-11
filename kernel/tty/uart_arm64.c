@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 // Adapted from: https://github.com/nuta/operating-system-in-1000-lines
 
-#include <kernel/asm/arm64.h>
+#include <kernel/asm/asm.h>
 #include <kernel/core/assert.h>
 #include <kernel/core/printk.h>
 #include <kernel/core/ringbuf.h>
@@ -58,21 +58,16 @@ static inline volatile uint32_t *icr_addr(uintptr_t base) {
 // Initialize the UART living at the given base.
 static inline void uart_init_early_base(const char *device, uintptr_t base) {
 	// Disable UART and "push" changes
-	*cr_addr(base) = 0;
-	dsb_sy();
+	mmio_write_uint32(cr_addr(base), 0);
 
 	// Mask all IRQs
-	*imsc_addr(base) = 0x0;
+	mmio_write_uint32(imsc_addr(base), 0x0);
 
 	// Clear any pending IRQs
-	*icr_addr(base) = UARTICR_CLR_ALL;
-
-	// "Push" changes
-	dsb_sy();
+	mmio_write_uint32(icr_addr(base), UARTICR_CLR_ALL);
 
 	// Enable the device, receiving, and sending.
-	*cr_addr(base) = UARTCR_UARTEN | UARTCR_RXE | UARTCR_TXE;
-	dsb_sy();
+	mmio_write_uint32(cr_addr(base), UARTCR_UARTEN | UARTCR_RXE | UARTCR_TXE);
 
 	// Let the user know what we did.
 	printk("%s: UARTCR |= UARTEN | RXE | TXE\n", device);
@@ -127,22 +122,19 @@ static inline bool has_enabled_interrupts(void) {
 
 static inline void uart_init_irq_base(const char *device, uintptr_t base) {
 	// Enable the FIFO behavior
-	*clr_h_addr(base) |= UARTLCR_H_FEN;
+	mmio_write_uint32(clr_h_addr(base), (mmio_read_uint32(clr_h_addr(base)) | UARTLCR_H_FEN));
 
 	// Trigger interrupts when the RX level is 1/8 and the TX level is 1/8
-	*ifls_addr(base) = 0;
+	mmio_write_uint32(ifls_addr(base), 0);
 
 	// Defensively clear all potentially pending interrupts.
-	*icr_addr(base) = UARTICR_CLR_ALL;
+	mmio_write_uint32(icr_addr(base), UARTICR_CLR_ALL);
 
 	// Select the events to receive notifications about.
-	*imsc_addr(base) = UARTINT_RX | UARTINT_RT | UARTINT_OE;
+	mmio_write_uint32(imsc_addr(base), UARTINT_RX | UARTINT_RT | UARTINT_OE);
 
 	// Let the user know what we did *before* turning interrupts on.
 	printk("%s: UARTIMSC |= RX | RT | OE\n", device);
-
-	// Publish our changes.
-	dsb_sy();
 
 	// Ensure we all know we have interrupts.
 	set_has_interrupts();
@@ -165,12 +157,12 @@ static inline volatile uint32_t *fr_addr(uintptr_t base) {
 
 // Return whether the UART is readable.
 static inline bool __uart_readable(uintptr_t base) {
-	return (*fr_addr(base) & UARTFR_RXFE) == 0;
+	return (mmio_read_uint32(fr_addr(base)) & UARTFR_RXFE) == 0;
 }
 
 // Return whether the UART is writable.
 static inline bool __uart_writable(uintptr_t base) {
-	return (*fr_addr(base) & UARTFR_TXFF) == 0;
+	return (mmio_read_uint32(fr_addr(base)) & UARTFR_TXFF) == 0;
 }
 
 // UARTMIS: masked interrupt status register.
@@ -183,20 +175,19 @@ static struct ringbuf rxbuf;
 
 // Service the IRQ for the given base UART addr.
 static inline void __uart_irq_base(uintptr_t base) {
-	uint32_t mis = *mis_addr(base);
+	uint32_t mis = mmio_read_uint32(mis_addr(base));
 
 	// Handle the case of the UART being readable
 	if ((mis & (UARTINT_RX | UARTINT_RT | UARTINT_OE)) != 0) {
 		// Drain the RX FIFO first including per-byte flags
 		while (__uart_readable(base)) {
-			(void)ringbuf_push(&rxbuf, *dr_addr(base) & 0xFFFF);
+			uint16_t value = (uint16_t)(mmio_read_uint32(dr_addr(base)) & 0x0FFF);
+			(void)ringbuf_push(&rxbuf, value);
 		}
 
 		// Clear RX-related causes and stop the interrupt from firing
-		*icr_addr(base) = UARTINT_RX | UARTINT_RT | UARTINT_FE | UARTINT_PE | UARTINT_BE | UARTINT_OE;
-
-		// Publish the changes
-		dsb_sy();
+		uint32_t mask = UARTINT_RX | UARTINT_RT | UARTINT_FE | UARTINT_PE | UARTINT_BE | UARTINT_OE;
+		mmio_write_uint32(icr_addr(base), mask);
 
 		// Wake up any sleeping thread
 		sched_thread_resume_all(SCHED_THREAD_WAIT_UART_READABLE);
@@ -205,13 +196,10 @@ static inline void __uart_irq_base(uintptr_t base) {
 	// Handle the case of the UART being writable.
 	if ((mis & UARTINT_TX) != 0) {
 		// Acknowledge the TX interrupt
-		*icr_addr(base) = UARTINT_TX;
+		mmio_write_uint32(icr_addr(base), UARTINT_TX);
 
 		// Mask the interrupt to avoid level-triggered interrupt storms.
-		*imsc_addr(base) &= ~UARTINT_TX;
-
-		// Publish the changes
-		dsb_sy();
+		mmio_write_uint32(imsc_addr(base), (mmio_read_uint32(imsc_addr(base)) & ~UARTINT_TX));
 
 		// Let user space know it can send more
 		sched_thread_resume_all(SCHED_THREAD_WAIT_UART_WRITABLE);
@@ -297,8 +285,7 @@ ssize_t uart_send(const char *buf, size_t count, uint32_t flags) {
 		// Awesome, now send as much as possible until the
 		// device tells us that it has enough data
 		while (__uart_writable(UART0_BASE) && tot < count) {
-			dsb_sy();
-			*dr_addr(UART0_BASE) = buf[tot++];
+			mmio_write_uint32(dr_addr(UART0_BASE), (uint32_t)((uint8_t)buf[tot++]));
 		}
 
 		// If everything has been sent, our job is done
@@ -322,8 +309,8 @@ ssize_t uart_send(const char *buf, size_t count, uint32_t flags) {
 		}
 
 		// Enable the interrupt again
-		*imsc_addr(UART0_BASE) |= UARTINT_TX;
-		dsb_sy();
+		mmio_write_uint32(imsc_addr(UART0_BASE),
+				  (mmio_read_uint32(imsc_addr(UART0_BASE)) | UARTINT_TX));
 
 		// Release the spinlock and wait for writability.
 		//

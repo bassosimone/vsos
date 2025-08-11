@@ -1,3 +1,4 @@
+-DARCH_ARM64
 -ffreestanding
 -nostdinc
 -I.

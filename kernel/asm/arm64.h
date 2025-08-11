@@ -1,8 +1,6 @@
 // File: kernel/asm/arm64.h
 // Purpose: ARM64 assembly routines
 // SPDX-License-Identifier: MIT
-// Adapted from: https://github.com/nuta/operating-system-in-1000-lines
-
 #ifndef KERNEL_ASM_ARM64_H
 #define KERNEL_ASM_ARM64_H
 
@@ -78,13 +76,19 @@ static inline void disable_fp_simd(void) {
 	__enable_disable_fp_simd(false);
 }
 
-// DMB: data memory barrier.
-//
-// Before a read, similar to Zig's `.Acquire`.
-//
-// After a write, similar to Zig's `.Release`.
+// DMB: data memory barrier using `sy.`
 static inline void dmb_sy(void) {
 	__asm__ volatile("dmb sy" ::: "memory");
+}
+
+// DMB: data memory barrier using `ish`.
+static inline void dmb_ish(void) {
+	__asm__ volatile("dmb ish" ::: "memory");
+}
+
+// DMB: data memory barrier using `ishst`.
+static inline void dmb_ishst(void) {
+	__asm__ volatile("dmb ishst" ::: "memory");
 }
 
 // Disable IRQ interrupts by setting the I-bit in PSTATE.DAIF.
@@ -167,6 +171,23 @@ static inline void msr_cntp_tval_el0(uint64_t v) {
 // Enable the clock and unmask its interrupt when v is equal to 1.
 static inline void msr_cntp_ctl_el0(uint64_t v) {
 	__asm__ volatile("msr cntp_ctl_el0, %0" ::"r"(v));
+}
+
+// Perform a MMIO uint32_t read at the given address.
+//
+// We place a `dmb_ish` barrier after the load.
+static inline uint32_t mmio_read_uint32(volatile uint32_t *address) {
+	uint32_t value = *address;
+	dmb_ish();
+	return value;
+}
+
+// Perform a MMIO uint32_t write at the given address.
+//
+// We place a `dmb_ishst` barrier before the store.
+static inline void mmio_write_uint32(volatile uint32_t *address, uint32_t value) {
+	dmb_ishst();
+	*address = value;
 }
 
 #endif // KERNEL_ASM_ARM64
