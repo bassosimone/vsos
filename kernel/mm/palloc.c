@@ -5,7 +5,7 @@
 
 #include <kernel/boot/boot.h>	// for __free_ram, __free_ram_end
 #include <kernel/core/assert.h> // for KERNEL_ASSERT
-#include <kernel/mm/palloc.h>	// for arch_mm_phys_addr_t, etc.
+#include <kernel/mm/mm.h>	// for arch_mm_phys_addr_t, etc.
 
 #include <string.h> // for memset
 

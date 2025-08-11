@@ -7,7 +7,7 @@
 #include <kernel/core/panic.h>	// for panic
 #include <kernel/core/printk.h> // for printk
 #include <kernel/irq/irq.h>	// for irq_init
-#include <kernel/mm/vmap.h>	// for mm_init
+#include <kernel/mm/mm.h>	// for mm_init
 #include <kernel/sched/sched.h> // whole subsystem API
 #include <kernel/tty/uart.h>	// for uart_init_early
 

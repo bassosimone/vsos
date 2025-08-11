@@ -6,8 +6,7 @@
 #include <kernel/core/assert.h> // for KERNEL_ASSERT
 #include <kernel/core/printk.h> // for printk
 
-#include <kernel/mm/types.h> // for arch_mm_phys_addr_t, etc.
-#include <kernel/mm/vmap.h>  // for mm_map_identity, etc.
+#include <kernel/mm/mm.h> // for mm_map_identity, etc.
 
 void mm_virt_page_map(mm_phys_addr_t table, mm_phys_addr_t paddr, mm_virt_addr_t vaddr, mm_flags_t flags) {
 	// 1. make sure all the addresses are aligned with the page size

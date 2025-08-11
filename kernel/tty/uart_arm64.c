@@ -8,7 +8,7 @@
 #include <kernel/core/printk.h>
 #include <kernel/core/ringbuf.h>
 #include <kernel/core/spinlock.h>
-#include <kernel/mm/vmap.h>
+#include <kernel/mm/mm.h>
 #include <kernel/sched/sched.h>
 #include <kernel/tty/uart.h>
 

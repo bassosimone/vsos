@@ -6,7 +6,7 @@
 #include <kernel/boot/boot.h>	// for __vectors_el1
 #include <kernel/core/printk.h> // for printk.
 #include <kernel/irq/irq.h>	// for irq_init
-#include <kernel/mm/vmap.h>	// for mmap_identity
+#include <kernel/mm/mm.h>	// for mmap_identity
 #include <kernel/sched/sched.h> // for sched_clock_irq
 #include <kernel/tty/uart.h>	// for uart_init_irq
 
