@@ -7,6 +7,8 @@
 // Initialize the ticker and arm the first tick.
 //
 // The tick will emit an interrupt.
+//
+// Requires the trap subsystem to be ready.
 void clock_tick_start(void);
 
 // Re-arm the clock for emitting the next interrupt.

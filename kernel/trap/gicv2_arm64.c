@@ -11,13 +11,60 @@
 #include <kernel/trap/trap_arm64.h> // for __trap_isr
 #include <kernel/tty/uart.h>	    // for uart_init_irq
 
+// Returns the limit of the GICC MMIO range given a specific base.
+static inline uintptr_t gicc_memory_limit(uintptr_t base) {
+	return base + 0x2000ULL;
+}
+
+// Returns the limit of the GICD MMIO range given a specific base.
+static inline uintptr_t gicd_memory_limit(uintptr_t base) {
+	return base + 0x10000ULL;
+}
+
+// GICv2 device.
+//
+// Initialize using gicv2_init_struct.
+struct gicv2_device {
+	// GICC base MMIO address.
+	uintptr_t gicc_base;
+
+	// GICD base MMIO address.
+	uintptr_t gicd_base;
+
+	// name is the corresponding device name.
+	const char *name;
+};
+
+// Initialize the gicv2_device structure.
+//
+// You retain ownership of the device structure and of the name.
+static inline void
+gicv2_init_struct(struct gicv2_device *dev, uintptr_t gicc_base, uintptr_t gicd_base, const char *name) {
+	dev->gicc_base = gicc_base;
+	dev->gicd_base = gicd_base;
+	dev->name = name;
+}
+
+// Initialize memory mapping for the GICv2 driver.
+//
+// Called by the trap subsystem.
+//
+// Requires gicv2_init_struct first.
+static inline void gicv2_init_mm(struct gicv2_device *dev) {
+	uintptr_t gicc_limit = gicc_memory_limit(dev->gicc_base);
+	printk("%s: mmap_identity GICC_BASE %llx - %llx\n", dev->name, dev->gicc_base, gicc_limit);
+	mmap_identity(dev->gicc_base, gicc_limit, MM_FLAG_DEVICE | MM_FLAG_WRITE);
+
+	uintptr_t gicd_limit = gicd_memory_limit(dev->gicd_base);
+	printk("%s: mmap_identity GICD_BASE %llx - %llx\n", dev->name, dev->gicd_base, gicd_limit);
+	mmap_identity(dev->gicd_base, gicd_limit, MM_FLAG_DEVICE | MM_FLAG_WRITE);
+}
+
 // Base and limit memory addresses for the GICC.
 #define GICC_BASE 0x08010000UL
-#define GICC_LIMIT (GICC_BASE + 0x2000ULL)
 
 // Base and limit memory addresses for the GICD.
 #define GICD_BASE 0x08000000UL
-#define GICD_LIMIT (GICD_BASE + 0x10000ULL)
 
 // The ARM Generic Timer (physical EL1) PPI is INTID 30 on GIC (per-cpu)
 #define IRQ_PPI_CNTP 30u
@@ -25,12 +72,12 @@
 // The UART0 (PL011) on QEMU virt
 #define UART0_INTID 33u
 
-void trap_init_mm(void) {
-	printk("irq0: mmap_identity GICD_BASE %llx - %llx\n", GICD_BASE, GICD_LIMIT);
-	mmap_identity(GICD_BASE, GICD_LIMIT, MM_FLAG_DEVICE | MM_FLAG_WRITE);
+// The global irq0 device driver attached to the GICCv2.
+struct gicv2_device irq0;
 
-	printk("irq0: mmap_identity GICC_BASE %llx - %llx\n", GICC_BASE, GICC_LIMIT);
-	mmap_identity(GICC_BASE, GICC_LIMIT, MM_FLAG_DEVICE | MM_FLAG_WRITE);
+void trap_init_mm(void) {
+	gicv2_init_struct(&irq0, GICC_BASE, GICD_BASE, "irq0");
+	gicv2_init_mm(&irq0);
 }
 
 // GICC_CTRL: CPU interface control register.
