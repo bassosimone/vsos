@@ -69,13 +69,6 @@ int64_t sched_thread_start(sched_thread_main_t *main, void *opaque, uint64_t fla
 // If the thread exits, this function will never return.
 void sched_thread_yield(void);
 
-// Like sched_thread_yield but without disabling interrupts.
-//
-// Called by the scheduler internals.
-//
-// Do not use outside of this subsystem.
-void __sched_thread_yield(void);
-
 // Terminates the thread execution and sets the return value.
 //
 // The `retval` memory ownership is transferred from the thread to
@@ -113,13 +106,6 @@ struct sched_thread;
 //
 // Do not use outside of this subsystem.
 void __sched_switch(struct sched_thread *prev, struct sched_thread *next);
-
-// Put the CPU in low-power mode until an interrupt occurs.
-//
-// Called by the scheduler internals.
-//
-// Do not use outside of this subsystem.
-void __sched_idle(void);
 
 // Trampoline for starting a new kernel thread.
 //

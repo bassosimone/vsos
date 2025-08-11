@@ -2,6 +2,7 @@
 // Purpose: kernel thread scheduler
 // SPDX-License-Identifier: MIT
 
+#include <kernel/asm/asm.h>	  // for cpu_sleep_until_interrupt
 #include <kernel/core/assert.h>	  // for KERNEL_ASSERT
 #include <kernel/core/panic.h>	  // for panic
 #include <kernel/core/printk.h>	  // for printk
@@ -165,7 +166,7 @@ int64_t sched_thread_start(sched_thread_main_t *main, void *opaque, uint64_t fla
 	// the processor as soon as possible.
 	for (;;) {
 		sched_thread_yield();
-		__sched_idle();
+		cpu_sleep_until_interrupt();
 	}
 }
 
@@ -256,7 +257,7 @@ static struct sched_thread *select_runnable(void) {
 	return idle_thread;
 }
 
-void __sched_thread_yield(void) {
+static inline void __sched_thread_yield(void) {
 	// 1. Acquire the spinlock to prevent anyone else with messing with threads.
 	spinlock_acquire(&lock);
 
@@ -268,6 +269,17 @@ void __sched_thread_yield(void) {
 
 	// 4. perform the context switch proper
 	__unlock_and_switch_to(next);
+}
+
+void sched_thread_yield(void) {
+	// Disable interrupts while switching
+	local_irq_disable();
+
+	// Perform the actual switch
+	__sched_thread_yield();
+
+	// Re-enable interrupts when done
+	local_irq_enable();
 }
 
 [[noreturn]] void sched_thread_exit(void *retval) {
