@@ -165,28 +165,39 @@ static inline void __enable_timer_irq(void) {
 	gicv2_enable_ppi(&irq0, IRQ_PPI_CNTP, 0x80);
 }
 
+static inline void gicv2_enable_spi_level_cpu0(struct gicv2_device *dev, uint32_t id, uint8_t prio) {
+	// Added a random not-so-large value here
+	KERNEL_ASSERT(id >= 32 && id <= 256);
+
+	// Compute the n and the bit from the IRQ id
+	const uint32_t n = id / 32;   // 1
+	const uint32_t bit = id % 32; // 1
+
+	printk("%s: gicv2: disabling %u\n", dev->name, id);
+	mmio_write_uint32(gicd_icenabler_addr(dev->gicd_base, n), (1u << bit));
+
+	printk("%s: gicv2: setting priority of %u to %u\n", dev->name, id, (unsigned)prio);
+	mmio_write_uint8(gicd_ipriorityr_byte_addr(dev->gicd_base, id), prio);
+
+	printk("%s: gicv2: routing %u to CPU0\n", dev->name, id);
+	mmio_write_uint8(gicd_itargetsr_byte_addr(dev->gicd_base, id), 0x01);
+
+	printk("%s: gicv2: setting level-triggered IRQs for %u\n", dev->name, id);
+	const uint32_t idx = id / 16;
+	const uint32_t shift = (id % 16) * 2;
+	uint32_t cfgr = mmio_read_uint32(gicd_icfgr_addr(dev->gicd_base, idx));
+	cfgr &= ~(3u << shift);
+	mmio_write_uint32(gicd_icfgr_addr(dev->gicd_base, idx), cfgr);
+
+	printk("%s: gicv2: clear pending IRQs for %u\n", dev->name, id);
+	mmio_write_uint32(gicd_icpendr_addr(dev->gicd_base, n), (1u << bit));
+
+	printk("%s: gicv2: enabling %u\n", dev->name, id);
+	mmio_write_uint32(gicd_isenabler_addr(dev->gicd_base, n), (1u << bit));
+}
+
 static inline void __enable_uart_irq(void) {
-	const uint32_t id = UART0_INTID; // 33
-	const uint32_t n = id / 32;	 // 1
-	const uint32_t bit = id % 32;	 // 1
-
-	// Priority (lower is higher priority)
-	*gicd_ipriorityr_byte_addr(GICD_BASE, id) = 0x80;
-
-	// Route to CPU0 (bit0 = CPU0)
-	*gicd_itargetsr_byte_addr(GICD_BASE, id) = 0x01;
-
-	// Level-sensitive (00b)
-	const uint32_t idx = id / 16;	      // 2
-	const uint32_t shift = (id % 16) * 2; // 2
-	uint32_t cfgr = *gicd_icfgr_addr(GICD_BASE, idx);
-	cfgr &= ~(3u << shift); // clear to 00b (level)
-	*gicd_icfgr_addr(GICD_BASE, idx) = cfgr;
-
-	// Clean pending, (re)disable, then enable
-	*gicd_icenabler_addr(GICD_BASE, n) = (1u << bit);
-	*gicd_icpendr_addr(GICD_BASE, n) = (1u << bit);
-	*gicd_isenabler_addr(GICD_BASE, n) = (1u << bit);
+	gicv2_enable_spi_level_cpu0(&irq0, UART0_INTID, 0x80);
 }
 
 // Returns the GICv2 into a know state with all interrupts disabled.
