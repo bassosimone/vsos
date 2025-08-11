@@ -187,7 +187,22 @@ static inline void gicv2_reset(struct gicv2_device *dev) {
 	printk("%s: gicv2: disabling binary point split\n", dev->name);
 	mmio_write_uint32(gicc_bpr_addr(dev->gicc_base), 0);
 
-	// TODO(bassosimone): clear and disable all SPIs (what does SPI mean?)
+	// TODO(bassosimone): clear and disable shared peripherals (SPIs)
+}
+
+// Enables both the CPU interface and the distributor.
+//
+// Requires gicv2_reset first.
+static inline void gicv2_enable(struct gicv2_device *dev) {
+	printk("%s: gicv2: enabling the distributor\n", dev->name);
+	mmio_write_uint32(gicd_ctrl_addr(dev->gicd_base), 1);
+
+	printk("%s: gicv2: enabling the CPU interface\n", dev->name);
+	mmio_write_uint32(gicc_ctrl_addr(dev->gicc_base), 1);
+
+	// Needed? If so, we should find a portable abstraction
+	// name and put it in ./kernel/asm/arm64.h
+	isb();
 }
 
 void trap_init_irqs(void) {
@@ -202,12 +217,8 @@ void trap_init_irqs(void) {
 	__enable_timer_irq();
 	__enable_uart_irq();
 
-	// Enable distributor and CPU interface (single-group NS-only flow)
-	printk("irq0: enabling CPU interface and distributor\n");
-	*gicd_ctrl_addr(GICD_BASE) = 1;
-	*gicc_ctrl_addr(GICC_BASE) = 1;
-	dsb_sy();
-	isb();
+	// Re-enable interrupt controller
+	gicv2_enable(&irq0);
 
 	// Start IRQ for other subsystems
 	sched_clock_init_irqs();
