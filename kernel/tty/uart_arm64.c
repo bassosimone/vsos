@@ -108,10 +108,7 @@ struct pl011_device {
 };
 
 static void pl011_init_struct(struct pl011_device *dev) {
-	// Nothing to do for now. Also, doing a memset here is potentially
-	// dangerous if the structure is not aligned and memset is using
-	// aligned instructions that cause a data abort.
-	(void)dev;
+	__bzero_unaligned(dev, sizeof(*dev));
 }
 
 static inline void set_has_interrupts(struct pl011_device *dev) {
