@@ -4,8 +4,8 @@
 #ifndef KERNEL_CORE_SPINLOCK_H
 #define KERNEL_CORE_SPINLOCK_H
 
-#include <kernel/sys/errno.h>
-#include <kernel/sys/types.h>
+#include <sys/errno.h>
+#include <sys/types.h>
 
 // Contains a lock we will spin on.
 struct spinlock {

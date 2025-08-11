@@ -1,10 +1,9 @@
-// File: kernel/sys/errno.h
+// File: include/sys/errno.h
 // Purpose: Define possible error values.
 // SPDX-License-Identifier: MIT
 // Adapted from: https://github.com/nuta/operating-system-in-1000-lines
-
-#ifndef KERNEL_SYS_ERRNO_H
-#define KERNEL_SYS_ERRNO_H
+#ifndef __SYS_ERRNO_H__
+#define __SYS_ERRNO_H__
 
 // We try to use the same numbers used by Linux
 
@@ -26,4 +25,4 @@
 // Function not implemented.
 #define ENOSYS 38
 
-#endif // KERNEL_SYS_ERRNO_H
+#endif // __SYS_ERRNO_H__

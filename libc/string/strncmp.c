@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 // Adapted from: https://git.musl-libc.org/cgit/musl/tree/src/string/strncmp.c
 
-#include <libc/string/string.h>
+#include <string.h>
 
 int strncmp(const char *_l, const char *_r, size_t n) {
 	const unsigned char *l = (void *)_l, *r = (void *)_r;

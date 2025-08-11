@@ -5,7 +5,7 @@
 #ifndef KERNEL_TTY_UART_H
 #define KERNEL_TTY_UART_H
 
-#include <kernel/sys/types.h>
+#include <sys/types.h>
 
 // Early initialization for the UART driver.
 //

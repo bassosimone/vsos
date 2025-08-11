@@ -4,7 +4,7 @@
 #ifndef KERNEL_IRQ_IRQ_H
 #define KERNEL_IRQ_IRQ_H
 
-#include <kernel/sys/types.h>
+#include <sys/types.h>
 
 // Initialize the memory mapping for interrupt handling.
 //

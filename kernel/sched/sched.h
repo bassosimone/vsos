@@ -4,8 +4,8 @@
 #ifndef KERNEL_SCHED_SCHED_H
 #define KERNEL_SCHED_SCHED_H
 
-#include <kernel/sys/param.h> // for HZ
-#include <kernel/sys/types.h> // for uint64_t
+#include <sys/param.h> // for HZ
+#include <sys/types.h> // for uint64_t
 
 // Interrupt handler for the scheduler clock.
 //

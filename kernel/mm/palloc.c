@@ -6,7 +6,8 @@
 #include <kernel/boot/boot.h>	// for __free_ram, __free_ram_end
 #include <kernel/core/assert.h> // for KERNEL_ASSERT
 #include <kernel/mm/palloc.h>	// for arch_mm_phys_addr_t, etc.
-#include <libc/string/string.h> // for memset
+
+#include <string.h> // for memset
 
 // Location where the bump allocator is allocating memory.
 static mm_phys_addr_t next_paddr = (mm_phys_addr_t)__free_ram;

@@ -2,9 +2,9 @@
 // Purpose: syscall implementation for arm64
 // SPDX-License-Identifier: MIT
 
-#include <kernel/sys/types.h>	// for uintptr_t
-#include <libc/errno/errno.h>	// for errno
-#include <libc/unistd/unistd.h> // for syscall
+#include <errno.h>     // for errno
+#include <sys/types.h> // for uintptr_t
+#include <unistd.h>    // for syscall
 
 intptr_t
 syscall(uintptr_t num, uintptr_t a0, uintptr_t a1, uintptr_t a2, uintptr_t a3, uintptr_t a4, uintptr_t a5) {

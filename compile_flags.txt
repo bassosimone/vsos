@@ -1,6 +1,7 @@
 -ffreestanding
 -nostdinc
 -I.
+-Iinclude
 -std=c23
 -Wall
 -Wextra

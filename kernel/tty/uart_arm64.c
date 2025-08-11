@@ -10,9 +10,10 @@
 #include <kernel/core/spinlock.h>
 #include <kernel/mm/vmap.h>
 #include <kernel/sched/sched.h>
-#include <kernel/sys/errno.h>
-#include <kernel/sys/fcntl.h>
 #include <kernel/tty/uart.h>
+
+#include <sys/errno.h>
+#include <sys/fcntl.h>
 
 // PL011 UART base address in QEMU virt
 #define UART0_BASE 0x09000000

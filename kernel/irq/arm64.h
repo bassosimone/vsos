@@ -4,7 +4,7 @@
 #ifndef KERNEL_IRQ_ARM64_H
 #define KERNEL_IRQ_ARM64_H
 
-#include <kernel/sys/types.h>
+#include <sys/types.h>
 
 // Structure saving the pre-interrupt state.
 struct trapframe {

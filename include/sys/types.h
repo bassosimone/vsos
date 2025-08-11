@@ -1,9 +1,9 @@
-// File: kernel/sys/types.h
+// File: include/sys/types.h
 // Purpose: Types for 64 bit architectures (we don't support 32 bit).
 // SPDX-License-Identifier: MIT
 // Adapted from: https://github.com/nuta/operating-system-in-1000-lines
-#ifndef KERNEL_SYS_TYPES_H
-#define KERNEL_SYS_TYPES_H
+#ifndef __SYS_TYPES_H__
+#define __SYS_TYPES_H__
 
 // Basic integer types on the amd64 architecture.
 typedef unsigned char uint8_t;
@@ -60,4 +60,4 @@ typedef int64_t intptr_t;
 #define SSIZE_MAX INT64_MAX
 #define INTPTR_MAX INT64_MAX
 
-#endif // KERNEL_SYS_TYPES_H
+#endif // __SYS_TYPES_H__

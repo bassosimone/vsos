@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: MIT
 // Adapted from: https://github.com/nuta/operating-system-in-1000-lines
 
-#include <libc/string/string.h> // for strncmp
-#include <libc/unistd/unistd.h> // for write
+#include <string.h> // for strncmp
+#include <unistd.h> // for write
 
 __attribute__((section(".text.start"))) [[noreturn]] void _start(void) {
 	while (1) {

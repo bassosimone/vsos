@@ -8,9 +8,10 @@
 #include <kernel/core/spinlock.h> // for struct spinlock
 #include <kernel/irq/irq.h>	  // for irq_restore_user_and_eret
 #include <kernel/sched/sched.h>	  // system's API
-#include <kernel/sys/errno.h>	  // for EAGAIN
-#include <kernel/sys/param.h>	  // for SCHED_MAX_THREADS
-#include <libc/string/string.h>	  // for memset
+
+#include <string.h>    // for memset
+#include <sys/errno.h> // for EAGAIN
+#include <sys/param.h> // for SCHED_MAX_THREADS
 
 // The scheduler is not using this thread slot.
 #define SCHED_THREAD_STATE_UNUSED 0

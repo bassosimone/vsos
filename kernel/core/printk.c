@@ -4,9 +4,11 @@
 // Adapted from: https://github.com/nuta/operating-system-in-1000-lines
 
 #include <kernel/core/printk.h>
-#include <kernel/sys/fcntl.h>
 #include <kernel/tty/uart.h>
-#include <libc/string/string.h>
+
+#include <sys/fcntl.h>
+
+#include <string.h>
 
 // Note: this code cannot invoke `KERNEL_ASSERT` since it is called by `panic`.
 

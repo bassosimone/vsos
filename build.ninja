@@ -3,11 +3,11 @@
 # Purpose: Build the project
 
 rule kernel_cc
-  command = clang -I. -O2 -std=c23 -target aarch64-none-elf -ffreestanding -nostdlib -Wall -Wextra -c $in -o $out
+  command = clang -I. -Iinclude -O2 -std=c23 -target aarch64-none-elf -ffreestanding -nostdlib -Wall -Wextra -c $in -o $out
   description = CC KERNEL $out
 
 rule kernel_asm
-  command = clang -I. -O2 -std=c23 -target aarch64-none-elf -ffreestanding -nostdlib -Wall -Wextra -c $in -o $out
+  command = clang -I. -Iinclude -O2 -std=c23 -target aarch64-none-elf -ffreestanding -nostdlib -Wall -Wextra -c $in -o $out
   description = CC ASM KERNEL $out
 
 rule kernel_ld
@@ -15,7 +15,7 @@ rule kernel_ld
   description = LD KERNEL $out
 
 rule user_cc
-  command = clang -I. -O2 -std=c23 -fno-pic -target aarch64-none-elf -ffreestanding -nostdlib -Wall -Wextra -c $in -o $out
+  command = clang -Iinclude -O2 -std=c23 -fno-pic -target aarch64-none-elf -ffreestanding -nostdlib -Wall -Wextra -c $in -o $out
   description = CC USER $out
 
 rule user_ld
@@ -27,7 +27,7 @@ rule user_objcopy
   description = OBJCOPY USER $out
 
 rule kernel_incbin
-  command = clang -I. -O2 -target aarch64-none-elf -c $in -o $out
+  command = clang -I. -Iinclude -O2 -target aarch64-none-elf -c $in -o $out
   description = CC INCBIN $out
 
 build libc/errno/errno.o: user_cc libc/errno/errno.c

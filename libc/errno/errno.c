@@ -2,6 +2,6 @@
 // Purpose: definition of the errno variable
 // SPDX-License-Identifier: MIT
 
-#include <kernel/sys/errno.h>
+#include <errno.h>
 
 volatile int errno = 0;

@@ -5,7 +5,8 @@
 #include <kernel/asm/arm64.h>	// for dsb_sy, etc.
 #include <kernel/core/printk.h> // for printk
 #include <kernel/sched/sched.h> // subsystem API
-#include <kernel/sys/param.h>	// for HZ
+
+#include <sys/param.h> // for HZ
 
 // Flag indicating we should reschedule
 static uint64_t need_sched = 0;

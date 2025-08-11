@@ -5,8 +5,8 @@
 #ifndef KERNEL_MM_PALLOC_H
 #define KERNEL_MM_PALLOC_H
 
-#include <kernel/sys/param.h> // for MM_PAGE_SIZE
-#include <kernel/sys/types.h> // for size_t
+#include <sys/param.h> // for MM_PAGE_SIZE
+#include <sys/types.h> // for size_t
 
 #include <kernel/mm/types.h> // for mm_phys_addr_t, etc.
 

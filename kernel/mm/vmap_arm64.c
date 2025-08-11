@@ -12,7 +12,8 @@
 #include <kernel/mm/types.h>	// for mm_virt_addr_t
 #include <kernel/mm/vmap.h>	// for __mm_virt_page_map_assume_aligned
 #include <kernel/tty/uart.h>	// for uart_init_mm
-#include <libc/string/string.h> // for memset
+
+#include <string.h> // for memset
 
 // We're using identity mapping in this kernel
 static inline void *__phys_to_virt(uint64_t paddr) {

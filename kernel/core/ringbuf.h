@@ -4,7 +4,7 @@
 #ifndef KERNEL_CORE_RINGBUF_H
 #define KERNEL_CORE_RINGBUF_H
 
-#include <kernel/sys/types.h>
+#include <sys/types.h>
 
 // Size of a ringbuf buffer.
 #define RINGBUF_SIZE 256

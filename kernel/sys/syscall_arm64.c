@@ -3,10 +3,11 @@
 // SPDX-License-Identifier: MIT
 
 #include <kernel/irq/arm64.h>	// for struct trapframe
-#include <kernel/sys/errno.h>	// for EBADF
 #include <kernel/sys/syscall.h> // for SYS_write
-#include <kernel/sys/types.h>	// for uint64_t
 #include <kernel/tty/uart.h>	// for uart_read
+
+#include <sys/errno.h> // for EBADF
+#include <sys/types.h> // for uint64_t
 
 // Returns the syscall from the x8 register just like on Linux
 static inline uint64_t sysno_from_regs(struct trapframe *frame) {

@@ -6,7 +6,7 @@
 #ifndef KERNEL_ASM_ARM64_H
 #define KERNEL_ASM_ARM64_H
 
-#include <kernel/sys/types.h>
+#include <sys/types.h>
 
 // DSB: data synchronization barrier using sy.
 //

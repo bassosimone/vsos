@@ -5,8 +5,8 @@
 #ifndef KERNEL_MM_TYPES_H
 #define KERNEL_MM_TYPES_H
 
-#include <kernel/sys/param.h> // for MM_PAGE_SIZE
-#include <kernel/sys/types.h> // for uintptr_t, etc.
+#include <sys/param.h> // for MM_PAGE_SIZE
+#include <sys/types.h> // for uintptr_t, etc.
 
 // Portable definitions of page mapping flags.
 /*#define MM_FLAG_PRESENT (1 << 0)*/ // currently unused

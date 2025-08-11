@@ -5,9 +5,9 @@
 #ifndef KERNEL_MM_VMAP_H
 #define KERNEL_MM_VMAP_H
 
-#include <kernel/mm/types.h>  // for mm_phys_addr_t, etc.
-#include <kernel/sys/param.h> // for MM_PAGE_SIZE
-#include <kernel/sys/types.h> // for size_t
+#include <kernel/mm/types.h> // for mm_phys_addr_t, etc.
+#include <sys/param.h>	     // for MM_PAGE_SIZE
+#include <sys/types.h>	     // for size_t
 
 // Maps a physical page address to a virtual page address using the given top-level table.
 void mm_virt_page_map(mm_phys_addr_t table, mm_phys_addr_t paddr, mm_virt_addr_t vaddr, mm_flags_t flags);

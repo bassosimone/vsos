@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 // Adapted from: https://git.musl-libc.org/cgit/musl/tree/src/string/memset.c
 
-#include <libc/string/string.h>
+#include <string.h>
 
 void *memset(void *dest, int c, size_t n) {
 	unsigned char *s = dest;
