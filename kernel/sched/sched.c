@@ -9,7 +9,8 @@
 #include <kernel/core/printk.h>	  // for printk
 #include <kernel/core/spinlock.h> // for struct spinlock
 #include <kernel/irq/irq.h>	  // for irq_restore_user_and_eret
-#include <kernel/sched/sched.h>	  // system's API
+#include <kernel/sched/sched.h>	  // the subsystem's API
+#include <kernel/sched/switch.h>  // switching threads
 
 #include <string.h>    // for memset
 #include <sys/errno.h> // for EAGAIN

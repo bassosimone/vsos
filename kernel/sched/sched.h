@@ -1,5 +1,5 @@
 // File: kernel/sched/sched.h
-// Purpose: Public and protected scheduler API
+// Purpose: Public scheduler API
 // SPDX-License-Identifier: MIT
 #ifndef KERNEL_SCHED_SCHED_H
 #define KERNEL_SCHED_SCHED_H
@@ -78,29 +78,6 @@ int64_t sched_thread_join(int64_t tid, void **retvalptr);
 
 // Opaque representation of a kernel thread.
 struct sched_thread;
-
-// Machine-dependent context-switch implementation.
-//
-// "You are not expected to understand this".
-//
-// Called by the scheduler internals.
-//
-// Do not use outside of this subsystem.
-void __sched_switch(struct sched_thread *prev, struct sched_thread *next);
-
-// Trampoline for starting a new kernel thread.
-//
-// Called by the scheduler internals.
-//
-// Do not use outside of this subsystem.
-void __sched_trampoline(void);
-
-// Setup a kernel thread stack that resumes at __sched_trampoline.
-//
-// Called by the scheduler internals.
-//
-// Do not use outside of this subsystem.
-uintptr_t __sched_build_switch_frame(uintptr_t sp);
 
 // Switch to the first runnable thread and never return.
 //
@@ -197,6 +174,8 @@ void sched_thread_resume_all(uint64_t channels);
 // Put the given thread to sleep for the given amount of jiffies.
 //
 // Safe to call whenever you can call sched_thread_suspend.
+//
+// Has a private-like name because usually you want to use higher-level APIs.
 void __sched_thread_sleep(uint64_t jiffies);
 
 // Put the current thread to sleep for the given amount of nanoseconds.
