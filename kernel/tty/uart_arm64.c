@@ -15,9 +15,6 @@
 #include <sys/errno.h>
 #include <sys/fcntl.h>
 
-// PL011 UART base address in QEMU virt
-#define UART0_BASE 0x09000000
-
 // Returns the limit of the MMIO range given a specific base.
 static inline uintptr_t memory_limit(uintptr_t base) {
 	return base + 0x1000ULL;
@@ -73,18 +70,10 @@ static inline void uart_init_early_base(const char *device, uintptr_t base) {
 	printk("%s: UARTCR |= UARTEN | RXE | TXE\n", device);
 }
 
-void uart_init_early(void) {
-	uart_init_early_base("uart0", UART0_BASE);
-}
-
 static inline void uart_init_mm_base(const char *device, uintptr_t base) {
 	uintptr_t limit = memory_limit(base);
 	printk("%s: mmap_identity %llx - %llx\n", device, base, limit);
 	mmap_identity(base, limit, MM_FLAG_DEVICE | MM_FLAG_WRITE);
-}
-
-void uart_init_mm(void) {
-	uart_init_mm_base("uart0", UART0_BASE);
 }
 
 // UARTCLR_H bit to enable the FIFO.
@@ -138,10 +127,6 @@ static inline void uart_init_irq_base(const char *device, uintptr_t base) {
 
 	// Ensure we all know we have interrupts.
 	set_has_interrupts();
-}
-
-void uart_init_irq(void) {
-	uart_init_irq_base("uart0", UART0_BASE);
 }
 
 // UARTFR: flags register.
@@ -206,10 +191,6 @@ static inline void __uart_irq_base(uintptr_t base) {
 	}
 }
 
-void uart_irq(void) {
-	__uart_irq_base(UART0_BASE);
-}
-
 // Spinlock protecting the receive path.
 static struct spinlock rxlock;
 
@@ -265,7 +246,7 @@ ssize_t uart_recv(char *buf, size_t count, uint32_t flags) {
 // Spinlock protecting the send path.
 static struct spinlock txlock;
 
-ssize_t uart_send(const char *buf, size_t count, uint32_t flags) {
+static inline ssize_t __uart_send(uintptr_t base, const char *buf, size_t count, uint32_t flags) {
 	// Ensure we're not going to overflow the return value
 	count = (count <= SSIZE_MAX) ? count : SSIZE_MAX;
 
@@ -284,8 +265,8 @@ ssize_t uart_send(const char *buf, size_t count, uint32_t flags) {
 
 		// Awesome, now send as much as possible until the
 		// device tells us that it has enough data
-		while (__uart_writable(UART0_BASE) && tot < count) {
-			mmio_write_uint32(dr_addr(UART0_BASE), (uint32_t)((uint8_t)buf[tot++]));
+		while (__uart_writable(base) && tot < count) {
+			mmio_write_uint32(dr_addr(base), (uint32_t)((uint8_t)buf[tot++]));
 		}
 
 		// If everything has been sent, our job is done
@@ -309,8 +290,7 @@ ssize_t uart_send(const char *buf, size_t count, uint32_t flags) {
 		}
 
 		// Enable the interrupt again
-		mmio_write_uint32(imsc_addr(UART0_BASE),
-				  (mmio_read_uint32(imsc_addr(UART0_BASE)) | UARTINT_TX));
+		mmio_write_uint32(imsc_addr(base), (mmio_read_uint32(imsc_addr(base)) | UARTINT_TX));
 
 		// Release the spinlock and wait for writability.
 		//
@@ -320,4 +300,27 @@ ssize_t uart_send(const char *buf, size_t count, uint32_t flags) {
 		uint64_t channels = SCHED_THREAD_WAIT_UART_WRITABLE | SCHED_THREAD_WAIT_TIMER;
 		sched_thread_suspend(channels);
 	}
+}
+
+// PL011 UART base address in QEMU virt
+#define UART0_BASE 0x09000000
+
+void uart_init_early(void) {
+	uart_init_early_base("uart0", UART0_BASE);
+}
+
+void uart_init_mm(void) {
+	uart_init_mm_base("uart0", UART0_BASE);
+}
+
+void uart_init_irq(void) {
+	uart_init_irq_base("uart0", UART0_BASE);
+}
+
+void uart_irq(void) {
+	__uart_irq_base(UART0_BASE);
+}
+
+ssize_t uart_send(const char *buf, size_t count, uint32_t flags) {
+	return __uart_send(UART0_BASE, buf, count, flags);
 }
