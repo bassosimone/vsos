@@ -182,10 +182,23 @@ static inline uint32_t mmio_read_uint32(volatile uint32_t *address) {
 	return value;
 }
 
+// Like mmio_read_uint32 but for an uint8_t.
+static inline uint8_t mmio_read_uint8(volatile uint8_t *address) {
+	uint8_t value = *address;
+	dmb_ish();
+	return value;
+}
+
 // Perform a MMIO uint32_t write at the given address.
 //
 // We place a `dmb_ishst` barrier before the store.
 static inline void mmio_write_uint32(volatile uint32_t *address, uint32_t value) {
+	dmb_ishst();
+	*address = value;
+}
+
+// Like mmio_write_uint32 but for an uint8_t.
+static inline void mmio_write_uint8(volatile uint8_t *address, uint8_t value) {
 	dmb_ishst();
 	*address = value;
 }

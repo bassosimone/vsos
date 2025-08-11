@@ -4,6 +4,7 @@
 
 #include <kernel/asm/arm64.h>	    // for dsb_sy, etc.
 #include <kernel/boot/boot.h>	    // for __vectors_el1
+#include <kernel/core/assert.h>	    // for KERNEL_ASSERT
 #include <kernel/core/printk.h>	    // for printk.
 #include <kernel/mm/mm.h>	    // for mmap_identity
 #include <kernel/sched/sched.h>	    // for sched_clock_irq
@@ -140,11 +141,28 @@ static inline volatile uint32_t *gicd_icfgr_addr(uintptr_t base, size_t n) {
 	return (volatile uint32_t *)(base + 0xC00 + 4 * n);
 }
 
+// Enables the given private-peripheral interrupt (i.e., per-CPU interface).
+//
+// The clock, for example, belongs to this class.
+static inline void gicv2_enable_ppi(struct gicv2_device *dev, uint32_t id, uint8_t prio) {
+	// Make sure we're not going beyond the expected memory region.
+	KERNEL_ASSERT(id >= 16 && id <= 31);
+
+	printk("%s: gicv2: disabling %u\n", dev->name, id);
+	mmio_write_uint32(gicd_icenabler_addr(dev->gicd_base, 0), (1u << id));
+
+	printk("%s: gicv2: clear pending IRQs for %u\n", dev->name, id);
+	mmio_write_uint32(gicd_icpendr_addr(dev->gicd_base, 0), (1u << id));
+
+	printk("%s: gicv2: setting priority of %u to %u\n", dev->name, id, (unsigned)prio);
+	mmio_write_uint8(gicd_ipriorityr_byte_addr(dev->gicd_base, id), prio);
+
+	printk("%s: gicv2: enabling %u\n", dev->name, id);
+	mmio_write_uint32(gicd_isenabler_addr(dev->gicd_base, 0), (1u << id));
+}
+
 static inline void __enable_timer_irq(void) {
-	printk("irq0: enabling interrupt PPI %u (timer)\n", IRQ_PPI_CNTP);
-	*gicd_icenabler_addr(GICD_BASE, 0) = (1u << IRQ_PPI_CNTP);
-	*gicd_icpendr_addr(GICD_BASE, 0) = (1u << IRQ_PPI_CNTP);
-	*gicd_isenabler_addr(GICD_BASE, 0) = (1u << IRQ_PPI_CNTP);
+	gicv2_enable_ppi(&irq0, IRQ_PPI_CNTP, 0x80);
 }
 
 static inline void __enable_uart_irq(void) {
