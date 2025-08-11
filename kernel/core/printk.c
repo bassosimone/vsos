@@ -4,26 +4,20 @@
 // Adapted from: https://github.com/nuta/operating-system-in-1000-lines
 
 #include <kernel/core/printk.h>
+#include <kernel/sys/fcntl.h>
 #include <kernel/tty/uart.h>
 #include <libc/string/string.h>
 
 // Note: this code cannot invoke `KERNEL_ASSERT` since it is called by `panic`.
 
-// We will consider moving this function elsewhere if needed. For now, it
-// seems to be an implementation detail of printk.
-static inline int16_t uart_putchar(uint8_t ch) {
-	while (!uart_writable()) {
-		// Note: we MUST NOT yield here because otherwise the
-		// overall output of printk becomes garbage.
-	}
-	int16_t rv = __uart_try_write(ch);
-	// Note: we cannot `KERNEL_ASSERT(rv == 0)` here since this function is called by panic
-	return rv;
-}
-
-// Internal helper to print a single character
+// Ensure that printk is safe to call from any context by making it
+// nonblocking and retrying a bunch of times before giving up.
 static inline void _putchar(char ch) {
-	(void)uart_putchar(ch);
+	for (size_t idx = 0; idx < 1000; idx++) {
+		if (uart_send(&ch, 1, O_NONBLOCK) == 1) {
+			return;
+		}
+	}
 }
 
 static void _string(const char *s) {

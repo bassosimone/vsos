@@ -4,6 +4,7 @@
 #ifndef KERNEL_CORE_SPINLOCK_H
 #define KERNEL_CORE_SPINLOCK_H
 
+#include <kernel/sys/errno.h>
 #include <kernel/sys/types.h>
 
 // Contains a lock we will spin on.
@@ -25,6 +26,16 @@ static inline void spinlock_acquire(struct spinlock *lock) {
 	while (__atomic_test_and_set(&lock->value, __ATOMIC_ACQUIRE)) {
 		// 🌀🌀🌀🌀
 	}
+}
+
+// Attempt to acquire the spinlock.
+//
+// Return 0 on success and -EAGAIN on failure.
+static inline int64_t spinlock_try_acquire(struct spinlock *lock) {
+	if (__atomic_test_and_set(&lock->value, __ATOMIC_ACQUIRE)) {
+		return -EAGAIN;
+	}
+	return 0;
 }
 
 // Release the lock possibly enabling someone else to acquire it.

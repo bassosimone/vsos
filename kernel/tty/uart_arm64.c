@@ -7,6 +7,7 @@
 #include <kernel/core/assert.h>
 #include <kernel/core/printk.h>
 #include <kernel/core/ringbuf.h>
+#include <kernel/core/spinlock.h>
 #include <kernel/mm/vmap.h>
 #include <kernel/sched/sched.h>
 #include <kernel/sys/errno.h>
@@ -112,6 +113,17 @@ static inline volatile uint32_t *ifls_addr(uintptr_t base) {
 	return (volatile uint32_t *)(base + 0x34);
 }
 
+// Change our behavior once we have setup interrupts.
+static volatile uint64_t __has_interrupts = 0;
+
+static inline void set_has_interrupts(void) {
+	__atomic_store_n(&__has_interrupts, 1, __ATOMIC_RELEASE);
+}
+
+static inline bool has_enabled_interrupts(void) {
+	return __atomic_load_n(&__has_interrupts, __ATOMIC_ACQUIRE) != 0;
+}
+
 static inline void uart_init_irq_base(const char *device, uintptr_t base) {
 	// Enable the FIFO behavior
 	*clr_h_addr(base) |= UARTLCR_H_FEN;
@@ -126,10 +138,13 @@ static inline void uart_init_irq_base(const char *device, uintptr_t base) {
 	*imsc_addr(base) = UARTINT_RX | UARTINT_RT | UARTINT_OE;
 
 	// Let the user know what we did *before* turning interrupts on.
-	printk("%s: UARTIMSC |= RX | OE\n", device);
+	printk("%s: UARTIMSC |= RX | RT | OE\n", device);
 
 	// Publish our changes.
 	dsb_sy();
+
+	// Ensure we all know we have interrupts.
+	set_has_interrupts();
 }
 
 void uart_init_irq(void) {
@@ -150,6 +165,11 @@ static inline volatile uint32_t *fr_addr(uintptr_t base) {
 // Return whether the UART is readable.
 static inline bool __uart_readable(uintptr_t base) {
 	return (*fr_addr(base) & UARTFR_RXFE) == 0;
+}
+
+// Return whether the UART is writable.
+static inline bool __uart_writable(uintptr_t base) {
+	return (*fr_addr(base) & UARTFR_TXFF) == 0;
 }
 
 // UARTMIS: masked interrupt status register.
@@ -174,8 +194,26 @@ static inline void __uart_irq_base(uintptr_t base) {
 		// Clear RX-related causes and stop the interrupt from firing
 		*icr_addr(base) = UARTINT_RX | UARTINT_RT | UARTINT_FE | UARTINT_PE | UARTINT_BE | UARTINT_OE;
 
+		// Publish the changes
+		dsb_sy();
+
 		// Wake up any sleeping thread
 		sched_thread_resume_all(SCHED_THREAD_WAIT_UART_READABLE);
+	}
+
+	// Handle the case of the UART being writable.
+	if ((mis & UARTINT_TX) != 0) {
+		// Acknowledge the TX interrupt
+		*icr_addr(base) = UARTINT_TX;
+
+		// Mask the interrupt to avoid level-triggered interrupt storms.
+		*imsc_addr(base) &= ~UARTINT_TX;
+
+		// Publish the changes
+		dsb_sy();
+
+		// Let user space know it can send more
+		sched_thread_resume_all(SCHED_THREAD_WAIT_UART_WRITABLE);
 	}
 }
 
@@ -183,26 +221,116 @@ void uart_irq(void) {
 	__uart_irq_base(UART0_BASE);
 }
 
-int16_t __uart_getchar(uint32_t flags) {
+// Spinlock protecting the receive path.
+static struct spinlock rxlock;
+
+ssize_t uart_recv(char *buf, size_t count, uint32_t flags) {
+	// Defend against return value overflow
+	count = (count <= SSIZE_MAX) ? count : SSIZE_MAX;
+
+	// Attempt to read all the requested chars
+	size_t off = 0;
 	for (;;) {
-		// First attempt to read from the ring buffer
+		// Eventually stop reading
+		if (off >= count) {
+			return (ssize_t)off;
+		}
+
+		// Grab the spinlock to protect against multiple readers
+		// and yield here awaiting for it to become available
+		while (spinlock_try_acquire(&rxlock) != 0) {
+			if ((flags & O_NONBLOCK) != 0) {
+				return (off <= 0) ? -EAGAIN : (ssize_t)off;
+			}
+			sched_thread_yield();
+		}
+
+		// Attempt to read from the ring buffer
 		uint16_t data = 0;
-		if (ringbuf_pop(&rxbuf, &data)) {
+		bool success = ringbuf_pop(&rxbuf, &data);
+
+		// Drop the spinlock now that we've accessed the buffer
+		spinlock_release(&rxlock);
+
+		// Check whether we succeeded
+		if (success) {
 			// Separate actual data from error flags.
 			uint8_t err = (data & 0x0F00) >> 8;
 			if (err != 0) {
-				return -EIO;
+				return (off <= 0) ? -EIO : (ssize_t)off;
 			}
-			return data & 0xFF;
+			buf[off++] = (char)(data & 0xFF);
+			continue;
 		}
 
-		// Handle the case of nonblocking reading
+		// Handle the nonblocking read case
 		if ((flags & O_NONBLOCK) != 0) {
-			return -EAGAIN;
+			return (off <= 0) ? -EAGAIN : (ssize_t)off;
 		}
 
 		// Suspend until we have data to read
 		sched_thread_suspend(SCHED_THREAD_WAIT_UART_READABLE);
+	}
+}
+
+// Spinlock protecting the send path.
+static struct spinlock txlock;
+
+ssize_t uart_send(const char *buf, size_t count, uint32_t flags) {
+	// Ensure we're not going to overflow the return value
+	count = (count <= SSIZE_MAX) ? count : SSIZE_MAX;
+
+	// Count the number of characters sent
+	size_t tot = 0;
+
+	for (;;) {
+		// Grab the lock granting us the permission to transmit,
+		// however, be careful with O_NONBLOCK users.
+		while (spinlock_try_acquire(&txlock) != 0) {
+			if ((flags & O_NONBLOCK) != 0) {
+				return (tot <= 0) ? -EAGAIN : (ssize_t)tot;
+			}
+			sched_thread_yield();
+		}
+
+		// Awesome, now send as much as possible until the
+		// device tells us that it has enough data
+		while (__uart_writable(UART0_BASE) && tot < count) {
+			dsb_sy();
+			*dr_addr(UART0_BASE) = buf[tot++];
+		}
+
+		// If everything has been sent, our job is done
+		if (tot >= count) {
+			spinlock_release(&txlock);
+			return (ssize_t)tot;
+		}
+
+		// If we are nonblocking, this is the time where we'd block
+		if ((flags & O_NONBLOCK) != 0) {
+			spinlock_release(&txlock);
+			return (tot <= 0) ? -EAGAIN : (ssize_t)tot;
+		}
+
+		// If we are without interrupts and we are allowed to
+		// block, the best we can do is yield the CPU.
+		if (!has_enabled_interrupts()) {
+			spinlock_release(&txlock);
+			sched_thread_yield();
+			continue;
+		}
+
+		// Enable the interrupt again
+		*imsc_addr(UART0_BASE) |= UARTINT_TX;
+		dsb_sy();
+
+		// Release the spinlock and wait for writability.
+		//
+		// As a safety net, for now, also wait for the clock to tick
+		// such that we don't get a completely frozen console.
+		spinlock_release(&txlock);
+		uint64_t channels = SCHED_THREAD_WAIT_UART_WRITABLE | SCHED_THREAD_WAIT_TIMER;
+		sched_thread_suspend(channels);
 	}
 }
 

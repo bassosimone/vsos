@@ -57,14 +57,36 @@ bool uart_writable(void);
 // The read system call using the UART.
 ssize_t uart_read(char *buffer, size_t siz);
 
-// MD implementation of reading a byte from the UART.
+// Allows reading bytes from the UART.
 //
-// This function should only be called by functions in this subsystem.
+// The count is silently truncated to SSIZE_MAX if bigger.
 //
-// Returns a >= char (uint8_t) or a negative errno value.
-int16_t __uart_getchar(uint32_t flags);
+// The O_NONBLOCK flag allows for nonblocking ops.
+//
+// Returns the number of bytes read or a negative errno value.
+//
+// This function is safe to be called by multiple threads concurrently
+// however threads running at IRQ level MUST use O_NONBLOCK.
+//
+// This function blocks until interrupts are enabled.
+ssize_t uart_recv(char *buf, size_t count, uint32_t flags);
 
 // The write system call using the UART.
 ssize_t uart_write(const char *buffer, size_t siz);
+
+// Allows writing bytes to the UART.
+//
+// The count is silently truncated to SSIZE_MAX if bigger.
+//
+// The O_NONBLOCK flag allows for nonblocking ops.
+//
+// Returns the number of bytes written or a negative errno value.
+//
+// This function is safe to be called by multiple threads concurrently
+// however threads running at IRQ level MUST use O_NONBLOCK.
+//
+// This function falls back to cooperative multitasking if
+// we have not enabled interrupts yet.
+ssize_t uart_send(const char *buf, size_t count, uint32_t flags);
 
 #endif // KERNEL_TTY_UART_H

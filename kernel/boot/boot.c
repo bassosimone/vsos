@@ -43,7 +43,7 @@ static void _sleeper(void *opaque) {
 }
 
 // Very minimal mechanism to ensure we echo the input.
-static void _echo_thread(void *opaque) {
+[[noreturn]] static void _echo_thread(void *opaque) {
 	(void)opaque;
 	for (;;) {
 		char ch = 0;
@@ -54,7 +54,7 @@ static void _echo_thread(void *opaque) {
 		if (ch == '\r') {
 			ch = '\n';
 		}
-		uart_try_write(ch);
+		(void)uart_write(&ch, 1);
 	}
 }
 
