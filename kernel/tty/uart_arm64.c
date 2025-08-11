@@ -54,28 +54,43 @@ static inline volatile uint32_t *icr_addr(uintptr_t base) {
 // Bitmask used to clear all possible interrupt sources.
 #define UARTICR_CLR_ALL 0x7FF
 
-// Initialize the UART living at the given base.
-static inline void uart_init_early_base(const char *device, uintptr_t base) {
-	// Disable UART and "push" changes
-	mmio_write_uint32(cr_addr(base), 0);
+struct pl011_device {
+	uintptr_t base;
+	volatile uint64_t __has_interrupts;
+	struct ringbuf __rxbuf;
+	struct spinlock __rxlock;
+	struct spinlock __txlock;
+	const char *name;
+};
 
-	// Mask all IRQs
-	mmio_write_uint32(imsc_addr(base), 0x0);
-
-	// Clear any pending IRQs
-	mmio_write_uint32(icr_addr(base), UARTICR_CLR_ALL);
-
-	// Enable the device, receiving, and sending.
-	mmio_write_uint32(cr_addr(base), UARTCR_UARTEN | UARTCR_RXE | UARTCR_TXE);
-
-	// Let the user know what we did.
-	printk("%s: UARTCR |= UARTEN | RXE | TXE\n", device);
+static void pl011_init_struct(struct pl011_device *dev, uintptr_t base, const char *dev_name) {
+	__bzero_unaligned(dev, sizeof(*dev));
+	dev->base = base;
+	dev->name = dev_name;
 }
 
-static inline void uart_init_mm_base(const char *device, uintptr_t base) {
-	uintptr_t limit = memory_limit(base);
-	printk("%s: mmap_identity %llx - %llx\n", device, base, limit);
-	mmap_identity(base, limit, MM_FLAG_DEVICE | MM_FLAG_WRITE);
+// Initialize the UART living at the given base.
+static inline void uart_init_early_base(struct pl011_device *dev) {
+	// Disable UART and "push" changes
+	mmio_write_uint32(cr_addr(dev->base), 0);
+
+	// Mask all IRQs
+	mmio_write_uint32(imsc_addr(dev->base), 0x0);
+
+	// Clear any pending IRQs
+	mmio_write_uint32(icr_addr(dev->base), UARTICR_CLR_ALL);
+
+	// Enable the device, receiving, and sending.
+	mmio_write_uint32(cr_addr(dev->base), UARTCR_UARTEN | UARTCR_RXE | UARTCR_TXE);
+
+	// Let the user know what we did.
+	printk("%s: UARTCR |= UARTEN | RXE | TXE\n", dev->name);
+}
+
+static inline void uart_init_mm_base(struct pl011_device *dev) {
+	uintptr_t limit = memory_limit(dev->base);
+	printk("%s: mmap_identity %llx - %llx\n", dev->name, dev->base, limit);
+	mmap_identity(dev->base, limit, MM_FLAG_DEVICE | MM_FLAG_WRITE);
 }
 
 // UARTCLR_H bit to enable the FIFO.
@@ -100,21 +115,6 @@ static inline volatile uint32_t *ifls_addr(uintptr_t base) {
 	return (volatile uint32_t *)(base + 0x34);
 }
 
-struct pl011_device {
-	uintptr_t base;
-	volatile uint64_t __has_interrupts;
-	struct ringbuf __rxbuf;
-	struct spinlock __rxlock;
-	struct spinlock __txlock;
-	const char *name;
-};
-
-static void pl011_init_struct(struct pl011_device *dev, uintptr_t base, const char *dev_name) {
-	__bzero_unaligned(dev, sizeof(*dev));
-	dev->base = base;
-	dev->name = dev_name;
-}
-
 static inline void set_has_interrupts(struct pl011_device *dev) {
 	__atomic_store_n(&dev->__has_interrupts, 1, __ATOMIC_RELEASE);
 }
@@ -123,21 +123,21 @@ static inline bool has_enabled_interrupts(struct pl011_device *dev) {
 	return __atomic_load_n(&dev->__has_interrupts, __ATOMIC_ACQUIRE) != 0;
 }
 
-static inline void __uart_init_irq_base(struct pl011_device *dev, const char *device, uintptr_t base) {
+static inline void __uart_init_irq_base(struct pl011_device *dev) {
 	// Enable the FIFO behavior
-	mmio_write_uint32(clr_h_addr(base), (mmio_read_uint32(clr_h_addr(base)) | UARTLCR_H_FEN));
+	mmio_write_uint32(clr_h_addr(dev->base), (mmio_read_uint32(clr_h_addr(dev->base)) | UARTLCR_H_FEN));
 
 	// Trigger interrupts when the RX level is 1/8 and the TX level is 1/8
-	mmio_write_uint32(ifls_addr(base), 0);
+	mmio_write_uint32(ifls_addr(dev->base), 0);
 
 	// Defensively clear all potentially pending interrupts.
-	mmio_write_uint32(icr_addr(base), UARTICR_CLR_ALL);
+	mmio_write_uint32(icr_addr(dev->base), UARTICR_CLR_ALL);
 
 	// Select the events to receive notifications about.
-	mmio_write_uint32(imsc_addr(base), UARTINT_RX | UARTINT_RT | UARTINT_OE);
+	mmio_write_uint32(imsc_addr(dev->base), UARTINT_RX | UARTINT_RT | UARTINT_OE);
 
 	// Let the user know what we did *before* turning interrupts on.
-	printk("%s: UARTIMSC |= RX | RT | OE\n", device);
+	printk("%s: UARTIMSC |= RX | RT | OE\n", dev->name);
 
 	// Ensure we all know we have interrupts.
 	set_has_interrupts(dev);
@@ -316,19 +316,15 @@ static struct pl011_device uart0;
 void uart_init_early(void) {
 	pl011_init_struct(&uart0, UART0_BASE, "uart0");
 #undef UART0_BASE
-	uart_init_early_base(uart0.name, uart0.base);
+	uart_init_early_base(&uart0);
 }
 
 void uart_init_mm(void) {
-	uart_init_mm_base(uart0.name, uart0.base);
-}
-
-static inline void uart_init_irq_base(const char *device, uintptr_t base) {
-	__uart_init_irq_base(&uart0, device, base);
+	uart_init_mm_base(&uart0);
 }
 
 void uart_init_irq(void) {
-	uart_init_irq_base(uart0.name, uart0.base);
+	__uart_init_irq_base(&uart0);
 }
 
 static inline void __uart_irq_base(uintptr_t base) {
