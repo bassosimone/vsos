@@ -1,8 +1,8 @@
-// File: kernel/drivers/pl011.h
+// File: kernel/drivers/pl011_arm64.h
 // Purpose: AMBA PL011 UART device driver.
 // SPDX-License-Identifier: MIT
-#ifndef KERNEL_DRIVERS_PL011_H
-#define KERNEL_DRIVERS_PL011_H
+#ifndef KERNEL_DRIVERS_PL011_ARM64_H
+#define KERNEL_DRIVERS_PL011_ARM64_H
 
 #include <kernel/core/ringbuf.h>  // for struct ringbuf
 #include <kernel/core/spinlock.h> // for struct spinlock
@@ -92,4 +92,4 @@ ssize_t pl011_recv(struct pl011_device *dev, char *buf, size_t count, uint32_t f
 // we have not enabled interrupts for the PL011 yet.
 ssize_t pl011_send(struct pl011_device *dev, const char *buf, size_t count, uint32_t flags);
 
-#endif // KERNEL_DRIVERS_PL011_H
+#endif // KERNEL_DRIVERS_PL011_ARM64_H

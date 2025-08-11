@@ -2,8 +2,8 @@
 // Purpose: UART driver for ARM64 devices.
 // SPDX-License-Identifier: MIT
 
-#include <kernel/drivers/pl011.h> // for struct pl011_device
-#include <kernel/tty/uart.h>	  // for uart_init_early
+#include <kernel/drivers/pl011_arm64.h> // for struct pl011_device
+#include <kernel/tty/uart.h>		// for uart_init_early
 
 #include <sys/types.h> // for size_t
 

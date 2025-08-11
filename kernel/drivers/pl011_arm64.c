@@ -1,15 +1,15 @@
-// File: kernel/drivers/pl011.c
+// File: kernel/drivers/pl011_arm64.c
 // Purpose: AMBA PL011 UART device driver.
 // SPDX-License-Identifier: MIT
 // Adapted from: https://github.com/nuta/operating-system-in-1000-lines
 
-#include <kernel/asm/asm.h>	  // for mmio_write_uint32
-#include <kernel/core/printk.h>	  // for printk
-#include <kernel/core/ringbuf.h>  // for struct ringbuf
-#include <kernel/core/spinlock.h> // for struct spinlock
-#include <kernel/drivers/pl011.h> // for struct pl011_device
-#include <kernel/mm/mm.h>	  // for mmap_identity
-#include <kernel/sched/sched.h>	  // for sched_thread_suspend
+#include <kernel/asm/asm.h>		// for mmio_write_uint32
+#include <kernel/core/printk.h>		// for printk
+#include <kernel/core/ringbuf.h>	// for struct ringbuf
+#include <kernel/core/spinlock.h>	// for struct spinlock
+#include <kernel/drivers/pl011_arm64.h> // for struct pl011_device
+#include <kernel/mm/mm.h>		// for mmap_identity
+#include <kernel/sched/sched.h>		// for sched_thread_suspend
 
 #include <sys/errno.h> // for EAGAIN
 #include <sys/fcntl.h> // for O_NONBLOCK
