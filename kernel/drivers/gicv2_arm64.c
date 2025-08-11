@@ -2,15 +2,13 @@
 // Purpose: GICv2 driver
 // SPDX-License-Identifier: MIT
 
-#include <kernel/asm/arm64.h>	    // for dsb_sy, etc.
-#include <kernel/boot/boot.h>	    // for __vectors_el1
-#include <kernel/core/assert.h>	    // for KERNEL_ASSERT
-#include <kernel/core/printk.h>	    // for printk.
-#include <kernel/mm/mm.h>	    // for mmap_identity
-#include <kernel/sched/sched.h>	    // for sched_clock_irq
-#include <kernel/trap/trap.h>	    // for trap_init_mm
-#include <kernel/trap/trap_arm64.h> // for __trap_isr
-#include <kernel/tty/uart.h>	    // for uart_init_irq
+#include <kernel/asm/asm.h>		// for mmio_write_uint32
+#include <kernel/core/assert.h>		// for KERNEL_ASSERT
+#include <kernel/core/printk.h>		// for printk
+#include <kernel/drivers/gicv2_arm64.h> // for struct gicv2_device
+#include <kernel/mm/mm.h>		// for mmap_identity
+
+#include <sys/types.h> // for uintptr_t
 
 // Returns the limit of the GICC MMIO range given a specific base.
 static inline uintptr_t gicc_memory_limit(uintptr_t base) {
@@ -22,36 +20,13 @@ static inline uintptr_t gicd_memory_limit(uintptr_t base) {
 	return base + 0x10000ULL;
 }
 
-// GICv2 device.
-//
-// Initialize using gicv2_init_struct.
-struct gicv2_device {
-	// GICC base MMIO address.
-	uintptr_t gicc_base;
-
-	// GICD base MMIO address.
-	uintptr_t gicd_base;
-
-	// name is the corresponding device name.
-	const char *name;
-};
-
-// Initialize the gicv2_device structure.
-//
-// You retain ownership of the device structure and of the name.
-static inline void
-gicv2_init_struct(struct gicv2_device *dev, uintptr_t gicc_base, uintptr_t gicd_base, const char *name) {
+void gicv2_init_struct(struct gicv2_device *dev, uintptr_t gicc_base, uintptr_t gicd_base, const char *name) {
 	dev->gicc_base = gicc_base;
 	dev->gicd_base = gicd_base;
 	dev->name = name;
 }
 
-// Initialize memory mapping for the GICv2 driver.
-//
-// Called by the trap subsystem.
-//
-// Requires gicv2_init_struct first.
-static inline void gicv2_init_mm(struct gicv2_device *dev) {
+void gicv2_init_mm(struct gicv2_device *dev) {
 	uintptr_t gicc_limit = gicc_memory_limit(dev->gicc_base);
 	printk("%s: gicv2: mmap_identity GICC_BASE %llx - %llx\n", dev->name, dev->gicc_base, gicc_limit);
 	mmap_identity(dev->gicc_base, gicc_limit, MM_FLAG_DEVICE | MM_FLAG_WRITE);
@@ -59,26 +34,6 @@ static inline void gicv2_init_mm(struct gicv2_device *dev) {
 	uintptr_t gicd_limit = gicd_memory_limit(dev->gicd_base);
 	printk("%s: gicv2: mmap_identity GICD_BASE %llx - %llx\n", dev->name, dev->gicd_base, gicd_limit);
 	mmap_identity(dev->gicd_base, gicd_limit, MM_FLAG_DEVICE | MM_FLAG_WRITE);
-}
-
-// Base and limit memory addresses for the GICC.
-#define GICC_BASE 0x08010000UL
-
-// Base and limit memory addresses for the GICD.
-#define GICD_BASE 0x08000000UL
-
-// The ARM Generic Timer (physical EL1) PPI is INTID 30 on GIC (per-cpu)
-#define IRQ_PPI_CNTP 30u
-
-// The UART0 (PL011) on QEMU virt
-#define UART0_INTID 33u
-
-// The global irq0 device driver attached to the GICCv2.
-struct gicv2_device irq0;
-
-void trap_init_mm(void) {
-	gicv2_init_struct(&irq0, GICC_BASE, GICD_BASE, "irq0");
-	gicv2_init_mm(&irq0);
 }
 
 // GICC_CTRL: CPU interface control register.
@@ -141,10 +96,7 @@ static inline volatile uint32_t *gicd_icfgr_addr(uintptr_t base, size_t n) {
 	return (volatile uint32_t *)(base + 0xC00 + 4 * n);
 }
 
-// Enables the given private-peripheral interrupt (i.e., per-CPU interface).
-//
-// The clock, for example, belongs to this class.
-static inline void gicv2_enable_ppi(struct gicv2_device *dev, uint32_t id, uint8_t prio) {
+void gicv2_enable_ppi(struct gicv2_device *dev, uint32_t id, uint8_t prio) {
 	// Make sure we're not going beyond the expected memory region.
 	KERNEL_ASSERT(id >= 16 && id <= 31);
 
@@ -161,11 +113,7 @@ static inline void gicv2_enable_ppi(struct gicv2_device *dev, uint32_t id, uint8
 	mmio_write_uint32(gicd_isenabler_addr(dev->gicd_base, 0), (1u << id));
 }
 
-static inline void __enable_timer_irq(void) {
-	gicv2_enable_ppi(&irq0, IRQ_PPI_CNTP, 0x80);
-}
-
-static inline void gicv2_enable_spi_level_cpu0(struct gicv2_device *dev, uint32_t id, uint8_t prio) {
+void gicv2_enable_spi_level_cpu0(struct gicv2_device *dev, uint32_t id, uint8_t prio) {
 	// Added a random not-so-large value here
 	KERNEL_ASSERT(id >= 32 && id <= 256);
 
@@ -196,14 +144,7 @@ static inline void gicv2_enable_spi_level_cpu0(struct gicv2_device *dev, uint32_
 	mmio_write_uint32(gicd_isenabler_addr(dev->gicd_base, n), (1u << bit));
 }
 
-static inline void __enable_uart_irq(void) {
-	gicv2_enable_spi_level_cpu0(&irq0, UART0_INTID, 0x80);
-}
-
-// Returns the GICv2 into a know state with all interrupts disabled.
-//
-// Should be invoked first, before starting to program the device.
-static inline void gicv2_reset(struct gicv2_device *dev) {
+void gicv2_reset(struct gicv2_device *dev) {
 	printk("%s: gicv2: disabling CPU interface\n", dev->name);
 	mmio_write_uint32(gicc_ctrl_addr(dev->gicc_base), 0);
 
@@ -219,45 +160,15 @@ static inline void gicv2_reset(struct gicv2_device *dev) {
 	// TODO(bassosimone): clear and disable shared peripherals (SPIs)
 }
 
-// Enables both the CPU interface and the distributor.
-//
-// Requires gicv2_reset first.
-static inline void gicv2_enable(struct gicv2_device *dev) {
+void gicv2_enable(struct gicv2_device *dev) {
 	printk("%s: gicv2: enabling the distributor\n", dev->name);
 	mmio_write_uint32(gicd_ctrl_addr(dev->gicd_base), 1);
 
 	printk("%s: gicv2: enabling the CPU interface\n", dev->name);
 	mmio_write_uint32(gicc_ctrl_addr(dev->gicc_base), 1);
-
-	// Needed? If so, we should find a portable abstraction
-	// name and put it in ./kernel/asm/arm64.h
-	isb();
 }
 
-void trap_init_irqs(void) {
-	// Set the vector interrupt table
-	msr_vbar_el1((uint64_t)__vectors_el1);
-	isb();
-
-	// Reset interrupt controller
-	gicv2_reset(&irq0);
-
-	// Program devices (group/prio/route/trigger and set-enable)
-	__enable_timer_irq();
-	__enable_uart_irq();
-
-	// Re-enable interrupt controller
-	gicv2_enable(&irq0);
-
-	// Start IRQ for other subsystems
-	sched_clock_init_irqs();
-	uart_init_irqs();
-}
-
-// Returns true and a valid `iar` or false if the IRQ is a spurious one.
-//
-// Both `iar` and `id` will always be initialized to some value.
-static inline bool gicv2_acknowledge_irq(struct gicv2_device *dev, uint32_t *iar, uint32_t *id) {
+bool gicv2_acknowledge_irq(struct gicv2_device *dev, uint32_t *iar, uint32_t *id) {
 	// Acknowledge the IRQ and get the context
 	*iar = mmio_read_uint32(gicc_iar_addr(dev->gicc_base));
 
@@ -268,37 +179,6 @@ static inline bool gicv2_acknowledge_irq(struct gicv2_device *dev, uint32_t *iar
 	return *id < 1020;
 }
 
-// Notify that we are done handling this interrupt.
-static inline void gicv2_end_of_interrupt(struct gicv2_device *dev, uint32_t iar) {
+void gicv2_end_of_interrupt(struct gicv2_device *dev, uint32_t iar) {
 	mmio_write_uint32(gicc_eoir_addr(dev->gicc_base), iar);
-}
-
-void __trap_isr(struct trap_frame *frame) {
-	(void)frame;
-
-	// Acknowledge the IRQ and get the context
-	uint32_t iar = 0;
-	uint32_t irqid = 0;
-	if (!gicv2_acknowledge_irq(&irq0, &iar, &irqid)) {
-		return;
-	}
-
-	// Handle each IRQ type
-	switch (irqid) {
-	case IRQ_PPI_CNTP:
-		sched_clock_isr();
-		break;
-
-	case UART0_INTID:
-		uart_isr();
-		break;
-
-	default:
-		// Mask unexpected lines so they can't storm while debugging.
-		*gicd_icenabler_addr(GICD_BASE, (irqid / 32)) = (1u << (irqid % 32));
-		break;
-	}
-
-	// We're done handling this interrupt
-	gicv2_end_of_interrupt(&irq0, iar);
 }
