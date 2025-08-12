@@ -17,4 +17,7 @@
 // Afterwards, there is a fixed offset between virtual and physical.
 uintptr_t /* virt_addr */ __vm_direct_map(uintptr_t phys_addr);
 
+// Install the memory map for the kernel memory inside the root table.
+void __vm_map_kernel_memory(uintptr_t root_table);
+
 #endif // KERNEL_MM_VM_H
