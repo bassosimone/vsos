@@ -3,13 +3,14 @@
 // SPDX-License-Identifier: MIT
 // Adapted from: https://github.com/nuta/operating-system-in-1000-lines
 
-#include <kernel/asm/arm64.h>	// for dsb_sy, etc.
-#include <kernel/boot/boot.h>	// for __kernel_base
+#include <kernel/asm/arm64.h>   // for dsb_sy, etc.
+#include <kernel/boot/boot.h>   // for __kernel_base
 #include <kernel/core/assert.h> // for KERNEL_ASSERT
 #include <kernel/core/printk.h> // for printk
-#include <kernel/mm/mm.h>	// for mm_phys_page_alloc_many
-#include <kernel/trap/trap.h>	// for trap_init_mm
-#include <kernel/tty/uart.h>	// for uart_init_mm
+#include <kernel/mm/mm.h>       // for mm_phys_page_alloc_many
+#include <kernel/mm/page.h>     // for page_alloc
+#include <kernel/trap/trap.h>   // for trap_init_mm
+#include <kernel/tty/uart.h>    // for uart_init_mm
 
 // We're using identity mapping in this kernel
 static inline void *__phys_to_virt(uint64_t paddr) {
@@ -115,9 +116,9 @@ static uint64_t arm64_make_table_desc(mm_phys_addr_t paddr) {
 
 // The caller MUST already have checked that the addresses are all aligned.
 void __mm_virt_page_map_assume_aligned(mm_phys_addr_t table,
-				       mm_phys_addr_t paddr,
-				       mm_virt_addr_t vaddr,
-				       mm_flags_t flags) {
+                                       mm_phys_addr_t paddr,
+                                       mm_virt_addr_t vaddr,
+                                       mm_flags_t flags) {
 	// Step 0: validate assumptions
 	KERNEL_ASSERT(MM_PAGE_SIZE == 4096);
 
@@ -134,7 +135,7 @@ void __mm_virt_page_map_assume_aligned(mm_phys_addr_t table,
 	// Step 2: walk L1
 	uint64_t *l1 = (uint64_t *)__phys_to_virt(table);
 	if ((l1[l1_idx] & ARM64_PTE_VALID) == 0) {
-		mm_phys_addr_t l2_phys = mm_phys_page_alloc_many(1);
+		mm_phys_addr_t l2_phys = page_must_alloc(PAGE_ALLOC_WAIT);
 		l1[l1_idx] = arm64_make_table_desc(l2_phys);
 		dsb_ishst(); // ensure table write is visible
 	}
@@ -143,7 +144,7 @@ void __mm_virt_page_map_assume_aligned(mm_phys_addr_t table,
 	// Step 3: walk L2
 	uint64_t *l2 = (uint64_t *)__phys_to_virt(l1[l1_idx] & ARM64_PTE_ADDR_MASK);
 	if ((l2[l2_idx] & ARM64_PTE_VALID) == 0) {
-		mm_phys_addr_t l3_phys = mm_phys_page_alloc_many(1);
+		mm_phys_addr_t l3_phys = page_must_alloc(PAGE_ALLOC_WAIT);
 		l2[l2_idx] = arm64_make_table_desc(l3_phys);
 		dsb_ishst(); // ensure table write is visible
 	}
@@ -166,7 +167,7 @@ static uint64_t kernel_root_table;
 
 void mm_init(void) {
 	// 1) Root table for TTBR0 (kernel)
-	kernel_root_table = mm_phys_page_alloc_many(1);
+	kernel_root_table = page_must_alloc(PAGE_ALLOC_WAIT);
 	printk("mm: kernel_root_table %llx\n", kernel_root_table);
 
 	// 2) Map kernel sections (identity)
@@ -203,7 +204,7 @@ void mm_init(void) {
 	const uint64_t TG1_4K = 2ULL << 30;
 	const uint64_t IPS_40BIT = 2ull << 32;
 	uint64_t tcr = 0 | (T0SZ) | (IRGN_WBWA << 8) | (ORGN_WBWA << 10) | (SH_INNER << 12) | TG0_4K |
-		       (T1SZ << 16) | (IRGN_WBWA << 24) | (ORGN_WBWA << 26) | (SH_INNER << 28) | TG1_4K;
+	               (T1SZ << 16) | (IRGN_WBWA << 24) | (ORGN_WBWA << 26) | (SH_INNER << 28) | TG1_4K;
 	tcr |= IPS_40BIT;
 	printk("mm: msr_tcr_el1 %llx\n", tcr);
 	msr_tcr_el1(tcr);

@@ -177,7 +177,9 @@ int64_t page_alloc(page_addr_t *addr, uint64_t flags) {
 			if ((flags & PAGE_ALLOC_WAIT) == 0) {
 				return -EAGAIN;
 			}
-			sched_thread_yield();
+			if ((flags & PAGE_ALLOC_YIELD) != 0) {
+				sched_thread_yield();
+			}
 		}
 
 		size_t index = 0;
@@ -188,7 +190,9 @@ int64_t page_alloc(page_addr_t *addr, uint64_t flags) {
 			if ((flags & PAGE_ALLOC_WAIT) == 0) {
 				return -ENOMEM;
 			}
-			sched_thread_yield();
+			if ((flags & PAGE_ALLOC_YIELD) != 0) {
+				sched_thread_yield();
+			}
 			continue;
 		}
 

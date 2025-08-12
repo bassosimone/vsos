@@ -2,15 +2,15 @@
 // Purpose: kernel thread scheduler
 // SPDX-License-Identifier: MIT
 
-#include <kernel/asm/asm.h>	  // for cpu_sleep_until_interrupt
-#include <kernel/clock/clock.h>	  // for clock_tick_start
-#include <kernel/core/assert.h>	  // for KERNEL_ASSERT
-#include <kernel/core/panic.h>	  // for panic
-#include <kernel/core/printk.h>	  // for printk
+#include <kernel/asm/asm.h>       // for cpu_sleep_until_interrupt
+#include <kernel/clock/clock.h>   // for clock_tick_start
+#include <kernel/core/assert.h>   // for KERNEL_ASSERT
+#include <kernel/core/panic.h>    // for panic
+#include <kernel/core/printk.h>   // for printk
 #include <kernel/core/spinlock.h> // for struct spinlock
-#include <kernel/sched/sched.h>	  // the subsystem's API
+#include <kernel/sched/sched.h>   // the subsystem's API
 #include <kernel/sched/switch.h>  // switching threads
-#include <kernel/trap/trap.h>	  // for trap_restore_user_and_eret
+#include <kernel/trap/trap.h>     // for trap_restore_user_and_eret
 
 #include <string.h>    // for memset
 #include <sys/errno.h> // for EAGAIN
@@ -387,8 +387,8 @@ int64_t sched_thread_join(int64_t tid, void **retvalptr) {
 
 		// OK, this is the case where we have fun
 		case SCHED_THREAD_STATE_EXITED:
-			KERNEL_ASSERT(isjoinable);		  // must be the case
-			*retvalptr = other->retval;		  // transfer ownership
+			KERNEL_ASSERT(isjoinable);                // must be the case
+			*retvalptr = other->retval;               // transfer ownership
 			other->state = SCHED_THREAD_STATE_UNUSED; // make a short funeral
 			spinlock_release(&lock);
 			return 0;
