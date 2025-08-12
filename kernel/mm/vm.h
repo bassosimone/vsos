@@ -4,7 +4,31 @@
 #ifndef KERNEL_MM_VM_H
 #define KERNEL_MM_VM_H
 
+#include <sys/param.h> // for PAGE_SIZE
 #include <sys/types.h> // for uintptr_t
+
+// Portable definitions of page mapping flags.
+#define VM_MAP_FLAG_PRESENT (1 << 0)
+#define VM_MAP_FLAG_WRITE (1 << 1)
+#define VM_MAP_FLAG_EXEC (1 << 2)
+#define VM_MAP_FLAG_USER (1 << 3)
+#define VM_MAP_FLAG_DEVICE (1 << 4)
+
+// Ensure that the page is a power of two.
+static_assert(__builtin_popcount(PAGE_SIZE) == 1);
+
+// Align a value to the value of the page below the value itself.
+static inline uintptr_t vm_align_down(uintptr_t value) {
+	return value & ~(PAGE_SIZE - 1);
+}
+
+// Align a value to the value of the page above the value itself.
+static inline uintptr_t vm_align_up(uintptr_t value) {
+	return (value + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+}
+
+// Flags passed to vm_map
+typedef uint64_t vm_map_flags_t;
 
 // Initialization function that switches from physical to virtual addressing.
 //

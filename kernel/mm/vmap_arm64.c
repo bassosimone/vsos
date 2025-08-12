@@ -7,7 +7,6 @@
 #include <kernel/boot/boot.h>   // for __kernel_base
 #include <kernel/core/assert.h> // for KERNEL_ASSERT
 #include <kernel/core/printk.h> // for printk
-#include <kernel/mm/mm.h>       // for mm_phys_page_alloc_many
 #include <kernel/mm/page.h>     // for page_alloc
 #include <kernel/mm/vm.h>       // for __vm_map_kernel_memory
 
@@ -46,14 +45,14 @@
 #define MAIR_ATTR_DEVICE_nGnRE 0x04
 
 // Creates a leaf page table entry.
-static uint64_t make_leaf_pte(mm_phys_addr_t paddr, mm_flags_t flags) {
+static uint64_t make_leaf_pte(uintptr_t paddr, vm_map_flags_t flags) {
 	uint64_t pte = paddr & ARM64_PTE_ADDR_MASK;
 
 	// Valid leaf
 	pte |= ARM64_PTE_VALID | ARM64_PTE_TABLE | ARM64_PTE_AF;
 
 	// Memory type + shareability
-	if ((flags & MM_FLAG_DEVICE) != 0) {
+	if ((flags & VM_MAP_FLAG_DEVICE) != 0) {
 		// Device-nGnRE is common for MMIO (AttrIdx=1), SH is ignored for Device but OUTER is fine
 		pte |= ARM64_PTE_ATTRINDX(1) | ARM64_PTE_SH_OUTER;
 		// Device memory MUST NOT be executable by kernel or user
@@ -63,9 +62,9 @@ static uint64_t make_leaf_pte(mm_phys_addr_t paddr, mm_flags_t flags) {
 		pte |= ARM64_PTE_ATTRINDX(0) | ARM64_PTE_SH_INNER;
 	}
 
-	const bool is_user = (flags & MM_FLAG_USER) != 0;
-	const bool can_write = (flags & MM_FLAG_WRITE) != 0;
-	const bool can_exec = (flags & MM_FLAG_EXEC) != 0;
+	const bool is_user = (flags & VM_MAP_FLAG_USER) != 0;
+	const bool can_write = (flags & VM_MAP_FLAG_WRITE) != 0;
+	const bool can_exec = (flags & VM_MAP_FLAG_EXEC) != 0;
 
 	// AP: choose exactly one encoding
 	if (is_user) {
@@ -104,17 +103,17 @@ static uint64_t make_leaf_pte(mm_phys_addr_t paddr, mm_flags_t flags) {
 }
 
 // Creates an intermediate table descriptor.
-static uint64_t make_table_desc(mm_phys_addr_t paddr) {
+static uint64_t make_table_desc(uintptr_t paddr) {
 	uint64_t desc = paddr & ARM64_PTE_ADDR_MASK;
 	desc |= ARM64_PTE_VALID | ARM64_PTE_TABLE;
 	return desc;
 }
 
 // The caller MUST already have checked that the addresses are all aligned.
-void __mm_virt_page_map_assume_aligned(mm_phys_addr_t table,
-                                       mm_phys_addr_t paddr,
-                                       mm_virt_addr_t vaddr,
-                                       mm_flags_t flags) {
+void __mm_virt_page_map_assume_aligned(uintptr_t table,
+                                       page_addr_t paddr,
+                                       uintptr_t vaddr,
+                                       vm_map_flags_t flags) {
 	// Step 0: validate assumptions
 	KERNEL_ASSERT(PAGE_SIZE == 4096);
 
@@ -127,7 +126,7 @@ void __mm_virt_page_map_assume_aligned(mm_phys_addr_t table,
 	// Step 2: walk L1
 	uint64_t *l1 = (uint64_t *)__vm_direct_map(table);
 	if ((l1[l1_idx] & ARM64_PTE_VALID) == 0) {
-		mm_phys_addr_t l2_phys = page_must_alloc(PAGE_ALLOC_WAIT);
+		uintptr_t l2_phys = page_must_alloc(PAGE_ALLOC_WAIT);
 		l1[l1_idx] = make_table_desc(l2_phys);
 		dsb_ishst(); // ensure table write is visible
 	}
@@ -136,7 +135,7 @@ void __mm_virt_page_map_assume_aligned(mm_phys_addr_t table,
 	// Step 3: walk L2
 	uint64_t *l2 = (uint64_t *)__vm_direct_map(l1[l1_idx] & ARM64_PTE_ADDR_MASK);
 	if ((l2[l2_idx] & ARM64_PTE_VALID) == 0) {
-		mm_phys_addr_t l3_phys = page_must_alloc(PAGE_ALLOC_WAIT);
+		uintptr_t l3_phys = page_must_alloc(PAGE_ALLOC_WAIT);
 		l2[l2_idx] = make_table_desc(l3_phys);
 		dsb_ishst(); // ensure table write is visible
 	}

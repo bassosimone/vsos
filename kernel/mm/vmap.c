@@ -8,7 +8,7 @@
 
 #include <kernel/mm/mm.h> // for mm_map_identity, etc.
 
-void mm_virt_page_map(mm_phys_addr_t table, mm_phys_addr_t paddr, mm_virt_addr_t vaddr, mm_flags_t flags) {
+void mm_virt_page_map(uintptr_t table, page_addr_t paddr, uintptr_t vaddr, vm_map_flags_t flags) {
 	// 1. make sure all the addresses are aligned with the page size
 	KERNEL_ASSERT(__builtin_is_aligned(table, MM_PAGE_SIZE));
 	KERNEL_ASSERT(__builtin_is_aligned(paddr, MM_PAGE_SIZE));
@@ -18,7 +18,7 @@ void mm_virt_page_map(mm_phys_addr_t table, mm_phys_addr_t paddr, mm_virt_addr_t
 	__mm_virt_page_map_assume_aligned(table, paddr, vaddr, flags);
 }
 
-void mm_map_identity(mm_phys_addr_t table, mm_phys_addr_t start, mm_phys_addr_t end, mm_flags_t flags) {
+void mm_map_identity(uintptr_t table, page_addr_t start, uintptr_t end, vm_map_flags_t flags) {
 	uint64_t aligned_start = mm_align_down(start);
 	uint64_t aligned_end = mm_align_up(end);
 	printk("  mm_map_identity: table=%llx, start=%llx, aligned_start=%llx, end=%llx, aligned_end=%llx, "

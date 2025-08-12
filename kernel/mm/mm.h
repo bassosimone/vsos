@@ -5,46 +5,29 @@
 #ifndef KERNEL_MM_MM_H
 #define KERNEL_MM_MM_H
 
+#include <kernel/mm/page.h> // for page_addr_t
+#include <kernel/mm/vm.h>   // for VM_MAP_FLAG_*
+
 #include <sys/param.h> // for MM_PAGE_SIZE
 #include <sys/types.h> // for uintptr_t, etc.
 
-// Portable definitions of page mapping flags.
-/*#define MM_FLAG_PRESENT (1 << 0)*/ // currently unused
-#define MM_FLAG_WRITE (1 << 1)
-#define MM_FLAG_EXEC (1 << 2)
-#define MM_FLAG_USER (1 << 3)
-#define MM_FLAG_DEVICE (1 << 4)
-
-// Physical and virtual address definitions on amd64.
-typedef uintptr_t mm_phys_addr_t;
-typedef uintptr_t mm_virt_addr_t;
-
-// Integer type containing the page mapping flags.
-typedef uint32_t mm_flags_t;
-
-// Align a value to the value of the page below the value itself.
-static inline uintptr_t mm_align_down(uintptr_t value) {
-	static_assert(__builtin_popcount(MM_PAGE_SIZE) == 1);
-	return value & ~(MM_PAGE_SIZE - 1);
-}
-
-// Align a value to the value of the page above the value itself.
-static inline uintptr_t mm_align_up(uintptr_t value) {
-	static_assert(__builtin_popcount(MM_PAGE_SIZE) == 1);
-	return (value + MM_PAGE_SIZE - 1) & ~(MM_PAGE_SIZE - 1);
-}
+// Backward compatible definitions
+#define MM_FLAG_WRITE VM_MAP_FLAG_WRITE
+#define MM_FLAG_EXEC VM_MAP_FLAG_EXEC
+#define MM_FLAG_USER VM_MAP_FLAG_USER
+#define MM_FLAG_DEVICE VM_MAP_FLAG_DEVICE
+#define mm_flags_t vm_map_flags_t
+#define mm_align_down vm_align_down
+#define mm_align_up vm_align_up
 
 // Maps a physical page address to a virtual page address using the given top-level table.
-void mm_virt_page_map(mm_phys_addr_t table, mm_phys_addr_t paddr, mm_virt_addr_t vaddr, mm_flags_t flags);
+void mm_virt_page_map(uintptr_t table, page_addr_t paddr, uintptr_t vaddr, mm_flags_t flags);
 
 // Internal machine dependent mapping implementation that assumes that
 // we have already checked that arguments are correctly aligned
-void __mm_virt_page_map_assume_aligned(mm_phys_addr_t table,
-                                       mm_phys_addr_t paddr,
-                                       mm_virt_addr_t vaddr,
-                                       mm_flags_t flags);
+void __mm_virt_page_map_assume_aligned(uintptr_t table, page_addr_t paddr, uintptr_t vaddr, mm_flags_t flags);
 
 // Maps maps the pages between the given start and end using identity mapping.
-void mm_map_identity(mm_phys_addr_t table, mm_phys_addr_t start, mm_phys_addr_t end, mm_flags_t flags);
+void mm_map_identity(uintptr_t table, uintptr_t start, uintptr_t end, mm_flags_t flags);
 
 #endif // KERNEL_MM_MM_H
