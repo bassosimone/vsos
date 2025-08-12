@@ -16,6 +16,9 @@
 // Resource temporarily unavailable.
 #define EAGAIN 11
 
+// Out of memory.
+#define ENOMEM 12
+
 // Operation would block.
 #define EWOULDBLOCK EAGAIN
 

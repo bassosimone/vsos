@@ -55,6 +55,7 @@ build kernel/drivers/pl011_arm64.o: kernel_cc kernel/drivers/pl011_arm64.c
 
 build kernel/mm/vmap_arm64.o: kernel_cc kernel/mm/vmap_arm64.c
 build kernel/mm/vmap.o: kernel_cc kernel/mm/vmap.c
+build kernel/mm/page.o: kernel_cc kernel/mm/page.c
 build kernel/mm/palloc.o: kernel_cc kernel/mm/palloc.c
 
 build kernel/sched/sched.o: kernel_cc kernel/sched/sched.c
@@ -76,4 +77,4 @@ build libc/string/memcpy_kernel.o: kernel_cc libc/string/memcpy.c
 build libc/string/memset_kernel.o: kernel_cc libc/string/memset.c
 build libc/string/strncmp_kernel.o: kernel_cc libc/string/strncmp.c
 
-build kernel.elf: kernel_ld kernel/boot/boot_arm64.o kernel/boot/boot.o kernel/clock/clock_arm64.o kernel/core/panic.o kernel/core/printk.o kernel/drivers/gicv2_arm64.o kernel/drivers/pl011_arm64.o kernel/mm/vmap_arm64.o kernel/mm/vmap.o kernel/mm/palloc.o kernel/sched/sched.o kernel/sched/switch_arm64.o kernel/syscall/read.o kernel/syscall/syscall.o kernel/syscall/write.o kernel/trap/handle_arm64.o kernel/trap/trap_arm64.o kernel/trap/vector_arm64.o kernel/tty/uart_arm64.o kernel/uspace/shell.o libc/string/memcpy_kernel.o libc/string/memset_kernel.o libc/string/strncmp_kernel.o
+build kernel.elf: kernel_ld kernel/boot/boot_arm64.o kernel/boot/boot.o kernel/clock/clock_arm64.o kernel/core/panic.o kernel/core/printk.o kernel/drivers/gicv2_arm64.o kernel/drivers/pl011_arm64.o kernel/mm/vmap_arm64.o kernel/mm/vmap.o kernel/mm/page.o kernel/mm/palloc.o kernel/sched/sched.o kernel/sched/switch_arm64.o kernel/syscall/read.o kernel/syscall/syscall.o kernel/syscall/write.o kernel/trap/handle_arm64.o kernel/trap/trap_arm64.o kernel/trap/vector_arm64.o kernel/tty/uart_arm64.o kernel/uspace/shell.o libc/string/memcpy_kernel.o libc/string/memset_kernel.o libc/string/strncmp_kernel.o

@@ -3,13 +3,15 @@
 // SPDX-License-Identifier: MIT
 // Adapted from: https://github.com/nuta/operating-system-in-1000-lines
 
-#include <kernel/boot/boot.h>	// whole subsystem API
-#include <kernel/core/panic.h>	// for panic
+#include <kernel/boot/boot.h>   // whole subsystem API
+#include <kernel/core/assert.h> // for KERNEL_ASSERT
+#include <kernel/core/panic.h>  // for panic
 #include <kernel/core/printk.h> // for printk
-#include <kernel/mm/mm.h>	// for mm_init
+#include <kernel/mm/mm.h>       // for mm_init
+#include <kernel/mm/page.h>     // for page_alloc
 #include <kernel/sched/sched.h> // whole subsystem API
-#include <kernel/trap/trap.h>	// for trap_init_irqs
-#include <kernel/tty/uart.h>	// for uart_init_early
+#include <kernel/trap/trap.h>   // for trap_init_irqs
+#include <kernel/tty/uart.h>    // for uart_init_early
 
 #include <string.h>    // for memset
 #include <sys/param.h> // for HZ
@@ -86,6 +88,21 @@ static void __kernel_zygote(void *opaque) {
 	printk("started echo thread: %d\n", tid);
 }
 
+static inline void __page_alloc_self_test() {
+	static page_addr_t __self_test_mem[500];
+	for (size_t idx = 0; idx < 500; idx++) {
+		page_addr_t addr = 0;
+		int64_t rc = page_alloc(&addr, /* flags */ 0);
+		KERNEL_ASSERT(rc == 0);
+		__self_test_mem[idx] = addr;
+	}
+	page_debug_printk();
+	for (size_t idx = 0; idx < 500; idx++) {
+		page_free(__self_test_mem[idx]);
+	}
+	page_debug_printk();
+}
+
 [[noreturn]] void __kernel_main(void) {
 	// 1. Zero the BSS section.
 	memset(__bss, 0, (size_t)(__bss_end - __bss));
@@ -93,18 +110,22 @@ static void __kernel_zygote(void *opaque) {
 	// 2. Initialize an early serial console.
 	uart_init_early();
 
-	// 3. Initialize the memory manager.
+	// 3. Initialize the physical page allocator.
+	page_init_early();
+	__page_alloc_self_test();
+
+	// 4. Initialize the memory manager.
 	//
 	// This will also initialize the mmap for other subsystems.
 	mm_init();
 
-	// 4. Create the kernel zygote thread.
+	// 5. Create the kernel zygote thread.
 	//
 	// This will enable interrupts and finish bringing the kernel up and running
 	int64_t tid = sched_thread_start(__kernel_zygote, /* opaque */ 0, /* flags */ 0);
 	printk("created __kernel_zygote thread: %d\n", tid);
 
-	// 5. Run the thread scheduler.
+	// 6. Run the thread scheduler.
 	//
 	// Needs to happen before we enable interrupts.
 	sched_thread_run();

@@ -11,7 +11,7 @@
 #define KERNEL_ASSERT(expr)                                                                                  \
 	do {                                                                                                 \
 		if (!(expr)) {                                                                               \
-			panic("assertion failed: %s (%s:%d)", #expr, __FILE__, __LINE__);                    \
+			panic("assertion failed: %s (%s:%d)\n", #expr, __FILE__, __LINE__);                  \
 		}                                                                                            \
 	} while (0)
 

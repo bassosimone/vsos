@@ -38,6 +38,7 @@ extern char __stack_top[];
 
 // Start of free memory
 extern char __free_ram[];
+#define __free_ram_start __free_ram
 
 // End of free memory
 extern char __free_ram_end[];
