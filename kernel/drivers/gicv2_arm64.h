@@ -30,7 +30,7 @@ void gicv2_init_struct(struct gicv2_device *dev, uintptr_t gicc_base, uintptr_t 
 // Called by the trap subsystem.
 //
 // Requires gicv2_init_struct first.
-void gicv2_init_mm(struct gicv2_device *dev);
+void gicv2_init_mm(struct gicv2_device *dev, uintptr_t root_table);
 
 // Enables the given private-peripheral interrupt (i.e., per-CPU interface).
 //

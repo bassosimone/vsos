@@ -21,6 +21,6 @@ uintptr_t /* virt_addr */ __vm_direct_map(uintptr_t phys_addr);
 void __vm_map_kernel_memory(uintptr_t root_table);
 
 // Requests the devices to install their memory map.
-void __vm_map_devices(void);
+void __vm_map_devices(uintptr_t root_table);
 
 #endif // KERNEL_MM_VM_H

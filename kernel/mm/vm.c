@@ -33,7 +33,7 @@ void __vm_map_kernel_memory(uintptr_t root_table) {
 	mm_map_identity(root_table, (uint64_t)__stack_bottom, (uint64_t)__stack_top, MM_FLAG_WRITE);
 }
 
-void __vm_map_devices(void) {
-	trap_init_mm();
-	uart_init_mm();
+void __vm_map_devices(uintptr_t root_table) {
+	trap_init_mm(root_table);
+	uart_init_mm(root_table);
 }

@@ -47,9 +47,6 @@ void __mm_virt_page_map_assume_aligned(mm_phys_addr_t table,
 // Maps maps the pages between the given start and end using identity mapping.
 void mm_map_identity(mm_phys_addr_t table, mm_phys_addr_t start, mm_phys_addr_t end, mm_flags_t flags);
 
-// More general memory mapper that does not depend on the kernel base page table.
-void mmap_identity(mm_phys_addr_t start, mm_phys_addr_t end, mm_flags_t flags);
-
 // Initialize the memory manager
 void mm_init(void);
 

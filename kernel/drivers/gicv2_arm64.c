@@ -2,11 +2,11 @@
 // Purpose: GICv2 driver
 // SPDX-License-Identifier: MIT
 
-#include <kernel/asm/asm.h>		// for mmio_write_uint32
-#include <kernel/core/assert.h>		// for KERNEL_ASSERT
-#include <kernel/core/printk.h>		// for printk
+#include <kernel/asm/asm.h>             // for mmio_write_uint32
+#include <kernel/core/assert.h>         // for KERNEL_ASSERT
+#include <kernel/core/printk.h>         // for printk
 #include <kernel/drivers/gicv2_arm64.h> // for struct gicv2_device
-#include <kernel/mm/mm.h>		// for mmap_identity
+#include <kernel/mm/mm.h>               // for mm_map_identity
 
 #include <sys/types.h> // for uintptr_t
 
@@ -26,14 +26,14 @@ void gicv2_init_struct(struct gicv2_device *dev, uintptr_t gicc_base, uintptr_t 
 	dev->name = name;
 }
 
-void gicv2_init_mm(struct gicv2_device *dev) {
+void gicv2_init_mm(struct gicv2_device *dev, uintptr_t root_table) {
 	uintptr_t gicc_limit = gicc_memory_limit(dev->gicc_base);
-	printk("%s: gicv2: mmap_identity GICC_BASE %llx - %llx\n", dev->name, dev->gicc_base, gicc_limit);
-	mmap_identity(dev->gicc_base, gicc_limit, MM_FLAG_DEVICE | MM_FLAG_WRITE);
+	printk("%s: gicv2: mm_map_identity GICC_BASE %llx - %llx\n", dev->name, dev->gicc_base, gicc_limit);
+	mm_map_identity(root_table, dev->gicc_base, gicc_limit, MM_FLAG_DEVICE | MM_FLAG_WRITE);
 
 	uintptr_t gicd_limit = gicd_memory_limit(dev->gicd_base);
-	printk("%s: gicv2: mmap_identity GICD_BASE %llx - %llx\n", dev->name, dev->gicd_base, gicd_limit);
-	mmap_identity(dev->gicd_base, gicd_limit, MM_FLAG_DEVICE | MM_FLAG_WRITE);
+	printk("%s: gicv2: mm_map_identity GICD_BASE %llx - %llx\n", dev->name, dev->gicd_base, gicd_limit);
+	mm_map_identity(root_table, dev->gicd_base, gicd_limit, MM_FLAG_DEVICE | MM_FLAG_WRITE);
 }
 
 // GICC_CTRL: CPU interface control register.

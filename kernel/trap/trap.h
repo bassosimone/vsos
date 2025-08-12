@@ -11,7 +11,7 @@
 // Called by the mm subsystem.
 //
 // This needs to happen before trap_init_irqs.
-void trap_init_mm(void);
+void trap_init_mm(uintptr_t root_table);
 
 // Initialize interrupt handling.
 //

@@ -3,13 +3,13 @@
 // SPDX-License-Identifier: MIT
 // Adapted from: https://github.com/nuta/operating-system-in-1000-lines
 
-#include <kernel/asm/asm.h>		// for mmio_write_uint32
-#include <kernel/core/printk.h>		// for printk
-#include <kernel/core/ringbuf.h>	// for struct ringbuf
-#include <kernel/core/spinlock.h>	// for struct spinlock
+#include <kernel/asm/asm.h>             // for mmio_write_uint32
+#include <kernel/core/printk.h>         // for printk
+#include <kernel/core/ringbuf.h>        // for struct ringbuf
+#include <kernel/core/spinlock.h>       // for struct spinlock
 #include <kernel/drivers/pl011_arm64.h> // for struct pl011_device
-#include <kernel/mm/mm.h>		// for mmap_identity
-#include <kernel/sched/sched.h>		// for sched_thread_suspend
+#include <kernel/mm/mm.h>               // for mm_map_identity
+#include <kernel/sched/sched.h>         // for sched_thread_suspend
 
 #include <sys/errno.h> // for EAGAIN
 #include <sys/fcntl.h> // for O_NONBLOCK
@@ -76,10 +76,10 @@ void pl011_init_early(struct pl011_device *dev) {
 	printk("%s: UARTCR |= UARTEN | RXE | TXE\n", dev->name);
 }
 
-void pl011_init_mm(struct pl011_device *dev) {
+void pl011_init_mm(struct pl011_device *dev, uintptr_t root_table) {
 	uintptr_t limit = memory_limit(dev->base);
-	printk("%s: mmap_identity %llx - %llx\n", dev->name, dev->base, limit);
-	mmap_identity(dev->base, limit, MM_FLAG_DEVICE | MM_FLAG_WRITE);
+	printk("%s: mm_map_identity %llx - %llx\n", dev->name, dev->base, limit);
+	mm_map_identity(root_table, dev->base, limit, MM_FLAG_DEVICE | MM_FLAG_WRITE);
 }
 
 // UARTCLR_H bit to enable the FIFO.
@@ -184,7 +184,7 @@ void pl011_isr(struct pl011_device *dev) {
 
 		// Mask the interrupt to avoid level-triggered interrupt storms.
 		mmio_write_uint32(imsc_addr(dev->base),
-				  (mmio_read_uint32(imsc_addr(dev->base)) & ~UARTINT_TX));
+		                  (mmio_read_uint32(imsc_addr(dev->base)) & ~UARTINT_TX));
 
 		// Let user space know it can send more
 		sched_thread_resume_all(SCHED_THREAD_WAIT_UART_WRITABLE);
@@ -285,7 +285,7 @@ ssize_t pl011_send(struct pl011_device *dev, const char *buf, size_t count, uint
 
 		// Enable the interrupt again
 		mmio_write_uint32(imsc_addr(dev->base),
-				  (mmio_read_uint32(imsc_addr(dev->base)) | UARTINT_TX));
+		                  (mmio_read_uint32(imsc_addr(dev->base)) | UARTINT_TX));
 
 		// Release the spinlock and wait for writability.
 		//

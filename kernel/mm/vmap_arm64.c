@@ -156,19 +156,16 @@ void __mm_virt_page_map_assume_aligned(mm_phys_addr_t table,
 	// support for TLB invalidation in this code.
 }
 
-// The kernel root page table.
-static uint64_t kernel_root_table;
-
 void mm_init(void) {
 	// 1) Root table for TTBR0 (kernel)
-	kernel_root_table = page_must_alloc(PAGE_ALLOC_WAIT);
+	uint64_t kernel_root_table = page_must_alloc(PAGE_ALLOC_WAIT);
 	printk("mm: kernel_root_table %llx\n", kernel_root_table);
 
 	// 2) Map kernel sections
 	__vm_map_kernel_memory(kernel_root_table);
 
 	// 3) Map devices we actually use
-	__vm_map_devices();
+	__vm_map_devices(kernel_root_table);
 
 	// 4) MAIR: idx0 Normal WBWA, idx1 Device-nGnRE
 	uint64_t mair = (MAIR_ATTR_NORMAL_WBWA << 0) | (MAIR_ATTR_DEVICE_nGnRE << 8);
@@ -200,8 +197,4 @@ void mm_init(void) {
 	printk("mm: msr_sctlr_el1: %llx\n", sctlr);
 	msr_sctlr_el1(sctlr);
 	isb();
-}
-
-void mmap_identity(mm_phys_addr_t start, mm_phys_addr_t end, mm_flags_t flags) {
-	mm_map_identity(kernel_root_table, start, end, flags);
 }

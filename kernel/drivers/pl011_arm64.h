@@ -47,7 +47,7 @@ void pl011_init_early(struct pl011_device *dev);
 // Uses the mm subsystem to setup a memory map.
 //
 // Requires pl011_init_early.
-void pl011_init_mm(struct pl011_device *dev);
+void pl011_init_mm(struct pl011_device *dev, uintptr_t root_table);
 
 // Initialize IRQs for the PL011 driver.
 //

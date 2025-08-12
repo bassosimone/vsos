@@ -14,7 +14,7 @@ void uart_init_early(void);
 // Initialize memory mapping for the UART driver.
 //
 // Called by the mm subsystem.
-void uart_init_mm(void);
+void uart_init_mm(uintptr_t root_table);
 
 // Initialize IRQs for the UART driver.
 //

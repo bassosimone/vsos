@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 #include <kernel/drivers/pl011_arm64.h> // for struct pl011_device
-#include <kernel/tty/uart.h>		// for uart_init_early
+#include <kernel/tty/uart.h>            // for uart_init_early
 
 #include <sys/types.h> // for size_t
 
@@ -17,8 +17,8 @@ void uart_init_early(void) {
 	pl011_init_early(&uart0);
 }
 
-void uart_init_mm(void) {
-	pl011_init_mm(&uart0);
+void uart_init_mm(uintptr_t root_table) {
+	pl011_init_mm(&uart0, root_table);
 }
 
 void uart_init_irqs(void) {
