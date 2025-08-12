@@ -17,6 +17,9 @@ typedef uintptr_t page_addr_t;
 // It is okay to yield when waiting.
 #define PAGE_ALLOC_YIELD (1 << 1)
 
+// Do not bother with returning a zeroed page.
+#define PAGE_ALLOC_DONTCLEAR (1 << 2)
+
 // Early initialization of the page allocator.
 //
 // Called early by the boot subsystem.
