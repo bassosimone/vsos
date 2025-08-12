@@ -54,3 +54,13 @@ void vm_switch(void) {
 	// 3. cross our fingers and geronimoooooooooo
 	__vm_switch_to_virtual(root);
 }
+
+void __vm_map_explicit(struct vm_root_pt root, page_addr_t paddr, uintptr_t vaddr, vm_map_flags_t flags) {
+	// 1. make sure all the addresses are aligned with the page size
+	KERNEL_ASSERT(__builtin_is_aligned(root.table, PAGE_SIZE));
+	KERNEL_ASSERT(__builtin_is_aligned(paddr, PAGE_SIZE));
+	KERNEL_ASSERT(__builtin_is_aligned(vaddr, PAGE_SIZE));
+
+	// 2. let the MD implementation finish the job
+	__vm_map_explicit_assume_aligned(root, paddr, vaddr, flags);
+}

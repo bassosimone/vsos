@@ -39,7 +39,15 @@ build libc/unistd/syscall_arm64.o: user_cc libc/unistd/syscall_arm64.c
 build libc/unistd/write.o: user_cc libc/unistd/write.c
 
 build shell/shell.o: user_cc shell/shell.c
-build shell.elf: user_ld libc/errno/errno.o libc/string/memcpy_user.o libc/string/memset_user.o libc/string/strncmp_user.o libc/unistd/read.o libc/unistd/syscall_arm64.o libc/unistd/write.o shell/shell.o
+build shell.elf: user_ld $
+    libc/errno/errno.o $
+    libc/string/memcpy_user.o $
+    libc/string/memset_user.o $
+    libc/string/strncmp_user.o $
+    libc/unistd/read.o $
+    libc/unistd/syscall_arm64.o $
+    libc/unistd/write.o $
+    shell/shell.o
 build shell.bin: user_objcopy shell.elf
 
 build kernel/boot/boot_arm64.o: kernel_cc kernel/boot/boot_arm64.c
@@ -53,7 +61,7 @@ build kernel/core/printk.o: kernel_cc kernel/core/printk.c
 build kernel/drivers/gicv2_arm64.o: kernel_cc kernel/drivers/gicv2_arm64.c
 build kernel/drivers/pl011_arm64.o: kernel_cc kernel/drivers/pl011_arm64.c
 
-build kernel/mm/vmap_arm64.o: kernel_cc kernel/mm/vmap_arm64.c
+build kernel/mm/vm_arm64.o: kernel_cc kernel/mm/vm_arm64.c
 build kernel/mm/vmap.o: kernel_cc kernel/mm/vmap.c
 build kernel/mm/page.o: kernel_cc kernel/mm/page.c
 build kernel/mm/vm.o: kernel_cc kernel/mm/vm.c
@@ -87,7 +95,7 @@ build kernel.elf: kernel_ld $
   kernel/drivers/pl011_arm64.o $
   kernel/mm/page.o $
   kernel/mm/vm.o $
-  kernel/mm/vmap_arm64.o $
+  kernel/mm/vm_arm64.o $
   kernel/mm/vmap.o $
   kernel/sched/sched.o $
   kernel/sched/switch_arm64.o $

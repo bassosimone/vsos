@@ -1,5 +1,5 @@
-// File: kernel/mm/vmap_arm64.c
-// Purpose: ARM64 bits of the vmap implementation.
+// File: kernel/mm/vm_arm64.c
+// Purpose: ARM64 bits of the VM implementation.
 // SPDX-License-Identifier: MIT
 // Adapted from: https://github.com/nuta/operating-system-in-1000-lines
 
@@ -7,7 +7,6 @@
 #include <kernel/boot/boot.h>   // for __kernel_base
 #include <kernel/core/assert.h> // for KERNEL_ASSERT
 #include <kernel/core/printk.h> // for printk
-#include <kernel/mm/mm.h>       // for prototypes
 #include <kernel/mm/page.h>     // for page_alloc
 #include <kernel/mm/vm.h>       // for __vm_map_kernel_memory
 
@@ -141,6 +140,9 @@ void __vm_map_explicit_assume_aligned(struct vm_root_pt root,
 		dsb_ishst(); // ensure table write is visible
 	}
 	printk("      l2[l2_idx] = %llx\n", l2[l2_idx]);
+
+	// TODO(bassosimone): what should we do if the mapping already exists?
+	// Right now, we replace it but this feels very wrong!!!
 
 	// Step 4: walk L3 (leaf)
 	uint64_t *l3 = (uint64_t *)__vm_direct_map(l2[l2_idx] & ARM64_PTE_ADDR_MASK);
