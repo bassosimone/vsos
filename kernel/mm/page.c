@@ -14,7 +14,7 @@
 #include <sys/param.h> // for PAGE_SIZE
 #include <sys/types.h> // for uintptr_t
 
-#include <string.h> // for memset
+#include <string.h> // for __bzero
 
 /*-
   Memory Layout
