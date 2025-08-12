@@ -6,6 +6,8 @@
 #include <kernel/core/printk.h> // for printk
 #include <kernel/mm/mm.h>       // for mm_map_identity
 #include <kernel/mm/vm.h>       // for __vm_direct_map
+#include <kernel/trap/trap.h>   // for trap_init_mm
+#include <kernel/tty/uart.h>    // for uart_init_mm
 
 #include <sys/types.h> // for uintptr_t
 
@@ -29,4 +31,9 @@ void __vm_map_kernel_memory(uintptr_t root_table) {
 
 	printk("vm: mapping __stack_bottom %llx -> __stack_top %llx\n", __stack_bottom, __stack_top);
 	mm_map_identity(root_table, (uint64_t)__stack_bottom, (uint64_t)__stack_top, MM_FLAG_WRITE);
+}
+
+void __vm_map_devices(void) {
+	trap_init_mm();
+	uart_init_mm();
 }

@@ -10,13 +10,6 @@
 #include <kernel/mm/mm.h>       // for mm_phys_page_alloc_many
 #include <kernel/mm/page.h>     // for page_alloc
 #include <kernel/mm/vm.h>       // for __vm_map_kernel_memory
-#include <kernel/trap/trap.h>   // for trap_init_mm
-#include <kernel/tty/uart.h>    // for uart_init_mm
-
-// We're using identity mapping in this kernel
-static inline void *__phys_to_virt(uint64_t paddr) {
-	return (void *)paddr;
-}
 
 // Physical address mask: page-aligned 4 KiB (bits [11:0] must be 0)
 #define ARM64_PTE_ADDR_MASK 0x0000FFFFFFFFF000ULL
@@ -134,7 +127,7 @@ void __mm_virt_page_map_assume_aligned(mm_phys_addr_t table,
 	// function named ensure_table_entry, maybe.
 
 	// Step 2: walk L1
-	uint64_t *l1 = (uint64_t *)__phys_to_virt(table);
+	uint64_t *l1 = (uint64_t *)__vm_direct_map(table);
 	if ((l1[l1_idx] & ARM64_PTE_VALID) == 0) {
 		mm_phys_addr_t l2_phys = page_must_alloc(PAGE_ALLOC_WAIT);
 		l1[l1_idx] = arm64_make_table_desc(l2_phys);
@@ -143,7 +136,7 @@ void __mm_virt_page_map_assume_aligned(mm_phys_addr_t table,
 	printk("      l1[l1_idx] = %llx\n", l1[l1_idx]);
 
 	// Step 3: walk L2
-	uint64_t *l2 = (uint64_t *)__phys_to_virt(l1[l1_idx] & ARM64_PTE_ADDR_MASK);
+	uint64_t *l2 = (uint64_t *)__vm_direct_map(l1[l1_idx] & ARM64_PTE_ADDR_MASK);
 	if ((l2[l2_idx] & ARM64_PTE_VALID) == 0) {
 		mm_phys_addr_t l3_phys = page_must_alloc(PAGE_ALLOC_WAIT);
 		l2[l2_idx] = arm64_make_table_desc(l3_phys);
@@ -152,7 +145,7 @@ void __mm_virt_page_map_assume_aligned(mm_phys_addr_t table,
 	printk("      l2[l2_idx] = %llx\n", l2[l2_idx]);
 
 	// Step 4: walk L3 (leaf)
-	uint64_t *l3 = (uint64_t *)__phys_to_virt(l2[l2_idx] & ARM64_PTE_ADDR_MASK);
+	uint64_t *l3 = (uint64_t *)__vm_direct_map(l2[l2_idx] & ARM64_PTE_ADDR_MASK);
 	uint64_t pte = arm64_make_leaf_pte(paddr, flags);
 	l3[l3_idx] = pte;
 	printk("      l3[l3_idx] = %llx\n", l3[l3_idx]);
@@ -175,8 +168,7 @@ void mm_init(void) {
 	__vm_map_kernel_memory(kernel_root_table);
 
 	// 3) Map devices we actually use
-	trap_init_mm();
-	uart_init_mm();
+	__vm_map_devices();
 
 	// 4) MAIR: idx0 Normal WBWA, idx1 Device-nGnRE
 	uint64_t mair = (MAIR_ATTR_NORMAL_WBWA << 0) | (MAIR_ATTR_DEVICE_nGnRE << 8);
