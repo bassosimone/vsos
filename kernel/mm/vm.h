@@ -27,6 +27,11 @@ static inline uintptr_t vm_align_up(uintptr_t value) {
 	return (value + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
 }
 
+// Type representing the root page table.
+struct vm_root_pt {
+	uintptr_t table;
+};
+
 // Flags passed to vm_map
 typedef uint64_t vm_map_flags_t;
 
@@ -46,13 +51,7 @@ void vm_switch(void);
 // Afterwards, there is a fixed offset between virtual and physical.
 uintptr_t /* virt_addr */ __vm_direct_map(uintptr_t phys_addr);
 
-// Install the memory map for the kernel memory inside the root table.
-void __vm_map_kernel_memory(uintptr_t root_table);
-
-// Requests the devices to install their memory map.
-void __vm_map_devices(uintptr_t root_table);
-
 // Switches from the physical to the virtual address space.
-void __vm_switch_to_virtual(uintptr_t root_table);
+void __vm_switch_to_virtual(struct vm_root_pt pt);
 
 #endif // KERNEL_MM_VM_H

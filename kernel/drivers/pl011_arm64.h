@@ -6,6 +6,7 @@
 
 #include <kernel/core/ringbuf.h>  // for struct ringbuf
 #include <kernel/core/spinlock.h> // for struct spinlock
+#include <kernel/mm/vm.h>         // for struct vm_root_pt
 
 #include <sys/types.h> // for uintptr_t
 
@@ -47,7 +48,7 @@ void pl011_init_early(struct pl011_device *dev);
 // Uses the mm subsystem to setup a memory map.
 //
 // Requires pl011_init_early.
-void pl011_init_mm(struct pl011_device *dev, uintptr_t root_table);
+void pl011_init_mm(struct pl011_device *dev, struct vm_root_pt root);
 
 // Initialize IRQs for the PL011 driver.
 //

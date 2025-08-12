@@ -4,6 +4,8 @@
 #ifndef KERNEL_DRIVERS_GICV2_H
 #define KERNEL_DRIVERS_GICV2_H
 
+#include <kernel/mm/vm.h> // for struct vm_root_pt
+
 #include <sys/types.h> // for uintptr_t
 
 // GICv2 device.
@@ -30,7 +32,7 @@ void gicv2_init_struct(struct gicv2_device *dev, uintptr_t gicc_base, uintptr_t 
 // Called by the trap subsystem.
 //
 // Requires gicv2_init_struct first.
-void gicv2_init_mm(struct gicv2_device *dev, uintptr_t root_table);
+void gicv2_init_mm(struct gicv2_device *dev, struct vm_root_pt root);
 
 // Enables the given private-peripheral interrupt (i.e., per-CPU interface).
 //

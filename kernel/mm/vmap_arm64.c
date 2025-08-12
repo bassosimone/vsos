@@ -7,6 +7,7 @@
 #include <kernel/boot/boot.h>   // for __kernel_base
 #include <kernel/core/assert.h> // for KERNEL_ASSERT
 #include <kernel/core/printk.h> // for printk
+#include <kernel/mm/mm.h>       // for prototypes
 #include <kernel/mm/page.h>     // for page_alloc
 #include <kernel/mm/vm.h>       // for __vm_map_kernel_memory
 
@@ -153,7 +154,7 @@ void __mm_virt_page_map_assume_aligned(uintptr_t table,
 	// support for TLB invalidation in this code.
 }
 
-void __vm_switch_to_virtual(uintptr_t root_table) {
+void __vm_switch_to_virtual(struct vm_root_pt root) {
 	// 1. MAIR: idx0 Normal WBWA, idx1 Device-nGnRE
 	uint64_t mair = (MAIR_ATTR_NORMAL_WBWA << 0) | (MAIR_ATTR_DEVICE_nGnRE << 8);
 	printk("vm: msr_mair_el1 %llx\n", mair);
@@ -175,7 +176,7 @@ void __vm_switch_to_virtual(uintptr_t root_table) {
 
 	// 3. set TTBR0 to the kernel root
 	printk("vm: msr_tbr0_el1\n");
-	msr_ttbr0_el1(root_table);
+	msr_ttbr0_el1(root.table);
 	isb();
 
 	// 4. Enable MMU + caches

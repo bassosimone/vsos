@@ -9,6 +9,7 @@
 #include <kernel/core/spinlock.h>       // for struct spinlock
 #include <kernel/drivers/pl011_arm64.h> // for struct pl011_device
 #include <kernel/mm/mm.h>               // for mm_map_identity
+#include <kernel/mm/vm.h>               // for vm_root_pt
 #include <kernel/sched/sched.h>         // for sched_thread_suspend
 
 #include <sys/errno.h> // for EAGAIN
@@ -76,10 +77,10 @@ void pl011_init_early(struct pl011_device *dev) {
 	printk("%s: UARTCR |= UARTEN | RXE | TXE\n", dev->name);
 }
 
-void pl011_init_mm(struct pl011_device *dev, uintptr_t root_table) {
+void pl011_init_mm(struct pl011_device *dev, struct vm_root_pt root) {
 	uintptr_t limit = memory_limit(dev->base);
 	printk("%s: mm_map_identity %llx - %llx\n", dev->name, dev->base, limit);
-	mm_map_identity(root_table, dev->base, limit, MM_FLAG_DEVICE | MM_FLAG_WRITE);
+	mm_map_identity(root.table, dev->base, limit, MM_FLAG_DEVICE | MM_FLAG_WRITE);
 }
 
 // UARTCLR_H bit to enable the FIFO.

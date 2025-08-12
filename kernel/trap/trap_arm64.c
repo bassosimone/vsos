@@ -5,6 +5,7 @@
 #include <kernel/asm/arm64.h>           // for msr_vbar_el1
 #include <kernel/boot/boot.h>           // for __vectors_el1
 #include <kernel/drivers/gicv2_arm64.h> // for struct gicv2_device
+#include <kernel/mm/vm.h>               // for struct vm_root_pt
 #include <kernel/sched/sched.h>         // for sched_clock_init_irqs
 #include <kernel/trap/trap.h>           // for trap_init_mm
 #include <kernel/trap/trap_arm64.h>     // for struct trap_frame
@@ -29,9 +30,9 @@
 // The global irq0 device driver attached to the GICCv2.
 struct gicv2_device irq0;
 
-void trap_init_mm(uintptr_t root_table) {
+void trap_init_mm(struct vm_root_pt root) {
 	gicv2_init_struct(&irq0, GICC_BASE, GICD_BASE, "irq0");
-	gicv2_init_mm(&irq0, root_table);
+	gicv2_init_mm(&irq0, root);
 }
 
 static inline void __enable_timer_irq(void) {

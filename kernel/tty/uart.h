@@ -4,6 +4,8 @@
 #ifndef KERNEL_TTY_UART_H
 #define KERNEL_TTY_UART_H
 
+#include <kernel/mm/vm.h> // for struct vm_root_pt
+
 #include <sys/types.h> // for size_t
 
 // Early initialization for the UART driver.
@@ -14,7 +16,7 @@ void uart_init_early(void);
 // Initialize memory mapping for the UART driver.
 //
 // Called by the mm subsystem.
-void uart_init_mm(uintptr_t root_table);
+void uart_init_mm(struct vm_root_pt root);
 
 // Initialize IRQs for the UART driver.
 //

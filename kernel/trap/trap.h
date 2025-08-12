@@ -4,14 +4,16 @@
 #ifndef KERNEL_TRAP_TRAP_H
 #define KERNEL_TRAP_TRAP_H
 
-#include <sys/types.h>
+#include <kernel/mm/vm.h> // for struct vm_root_pt
+
+#include <sys/types.h> // for uintptr_t
 
 // Initialize the memory mapping for trap handling.
 //
 // Called by the mm subsystem.
 //
 // This needs to happen before trap_init_irqs.
-void trap_init_mm(uintptr_t root_table);
+void trap_init_mm(struct vm_root_pt root);
 
 // Initialize interrupt handling.
 //
