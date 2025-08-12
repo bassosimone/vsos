@@ -7,8 +7,8 @@
 #include <kernel/core/assert.h> // for KERNEL_ASSERT
 #include <kernel/core/panic.h>  // for panic
 #include <kernel/core/printk.h> // for printk
-#include <kernel/mm/mm.h>       // for mm_init
 #include <kernel/mm/page.h>     // for page_alloc
+#include <kernel/mm/vm.h>       // for vm_switch
 #include <kernel/sched/sched.h> // whole subsystem API
 #include <kernel/trap/trap.h>   // for trap_init_irqs
 #include <kernel/tty/uart.h>    // for uart_init_early
@@ -114,10 +114,10 @@ static inline void __page_alloc_self_test() {
 	page_init_early();
 	__page_alloc_self_test();
 
-	// 4. Initialize the memory manager.
+	// 4. Switch to the virtual address space.
 	//
-	// This will also initialize the mmap for other subsystems.
-	mm_init();
+	// This is the place that makes everyone very nervous.
+	vm_switch();
 
 	// 5. Create the kernel zygote thread.
 	//

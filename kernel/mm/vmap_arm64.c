@@ -45,7 +45,8 @@
 #define MAIR_ATTR_NORMAL_WBWA 0xFF
 #define MAIR_ATTR_DEVICE_nGnRE 0x04
 
-static uint64_t arm64_make_leaf_pte(mm_phys_addr_t paddr, mm_flags_t flags) {
+// Creates a leaf page table entry.
+static uint64_t make_leaf_pte(mm_phys_addr_t paddr, mm_flags_t flags) {
 	uint64_t pte = paddr & ARM64_PTE_ADDR_MASK;
 
 	// Valid leaf
@@ -90,7 +91,7 @@ static uint64_t arm64_make_leaf_pte(mm_phys_addr_t paddr, mm_flags_t flags) {
 
 	// W^X warnings
 	if (can_write && can_exec) {
-		printk("mm: W|X is discouraged for %sspace\n", is_user ? "user" : "kernel");
+		printk("vm: W|X is discouraged for %sspace\n", is_user ? "user" : "kernel");
 	}
 
 	// Mark user pages as non-global to protect
@@ -102,7 +103,8 @@ static uint64_t arm64_make_leaf_pte(mm_phys_addr_t paddr, mm_flags_t flags) {
 	return pte;
 }
 
-static uint64_t arm64_make_table_desc(mm_phys_addr_t paddr) {
+// Creates an intermediate table descriptor.
+static uint64_t make_table_desc(mm_phys_addr_t paddr) {
 	uint64_t desc = paddr & ARM64_PTE_ADDR_MASK;
 	desc |= ARM64_PTE_VALID | ARM64_PTE_TABLE;
 	return desc;
@@ -114,23 +116,19 @@ void __mm_virt_page_map_assume_aligned(mm_phys_addr_t table,
                                        mm_virt_addr_t vaddr,
                                        mm_flags_t flags) {
 	// Step 0: validate assumptions
-	KERNEL_ASSERT(MM_PAGE_SIZE == 4096);
+	KERNEL_ASSERT(PAGE_SIZE == 4096);
 
 	// Step 1: resolve indices
 	uint64_t l1_idx = L1_INDEX(vaddr);
 	uint64_t l2_idx = L2_INDEX(vaddr);
 	uint64_t l3_idx = L3_INDEX(vaddr);
-
 	printk("      vaddr %llx => l1_idx %llx l2_idx %llx l3_idx %llx\n", vaddr, l1_idx, l2_idx, l3_idx);
-
-	// TODO(bassosimone): refactor duplicated code into a single
-	// function named ensure_table_entry, maybe.
 
 	// Step 2: walk L1
 	uint64_t *l1 = (uint64_t *)__vm_direct_map(table);
 	if ((l1[l1_idx] & ARM64_PTE_VALID) == 0) {
 		mm_phys_addr_t l2_phys = page_must_alloc(PAGE_ALLOC_WAIT);
-		l1[l1_idx] = arm64_make_table_desc(l2_phys);
+		l1[l1_idx] = make_table_desc(l2_phys);
 		dsb_ishst(); // ensure table write is visible
 	}
 	printk("      l1[l1_idx] = %llx\n", l1[l1_idx]);
@@ -139,14 +137,14 @@ void __mm_virt_page_map_assume_aligned(mm_phys_addr_t table,
 	uint64_t *l2 = (uint64_t *)__vm_direct_map(l1[l1_idx] & ARM64_PTE_ADDR_MASK);
 	if ((l2[l2_idx] & ARM64_PTE_VALID) == 0) {
 		mm_phys_addr_t l3_phys = page_must_alloc(PAGE_ALLOC_WAIT);
-		l2[l2_idx] = arm64_make_table_desc(l3_phys);
+		l2[l2_idx] = make_table_desc(l3_phys);
 		dsb_ishst(); // ensure table write is visible
 	}
 	printk("      l2[l2_idx] = %llx\n", l2[l2_idx]);
 
 	// Step 4: walk L3 (leaf)
 	uint64_t *l3 = (uint64_t *)__vm_direct_map(l2[l2_idx] & ARM64_PTE_ADDR_MASK);
-	uint64_t pte = arm64_make_leaf_pte(paddr, flags);
+	uint64_t pte = make_leaf_pte(paddr, flags);
 	l3[l3_idx] = pte;
 	printk("      l3[l3_idx] = %llx\n", l3[l3_idx]);
 	dsb_ishst(); // ensure page mapping is visible
@@ -156,24 +154,14 @@ void __mm_virt_page_map_assume_aligned(mm_phys_addr_t table,
 	// support for TLB invalidation in this code.
 }
 
-void mm_init(void) {
-	// 1) Root table for TTBR0 (kernel)
-	uint64_t kernel_root_table = page_must_alloc(PAGE_ALLOC_WAIT);
-	printk("mm: kernel_root_table %llx\n", kernel_root_table);
-
-	// 2) Map kernel sections
-	__vm_map_kernel_memory(kernel_root_table);
-
-	// 3) Map devices we actually use
-	__vm_map_devices(kernel_root_table);
-
-	// 4) MAIR: idx0 Normal WBWA, idx1 Device-nGnRE
+void __vm_switch_to_virtual(uintptr_t root_table) {
+	// 1. MAIR: idx0 Normal WBWA, idx1 Device-nGnRE
 	uint64_t mair = (MAIR_ATTR_NORMAL_WBWA << 0) | (MAIR_ATTR_DEVICE_nGnRE << 8);
-	printk("mm: msr_mair_el1 %llx\n", mair);
+	printk("vm: msr_mair_el1 %llx\n", mair);
 	msr_mair_el1(mair);
 	isb();
 
-	// 5) TCR: 39-bit VA for TTBR0/1, 4K granule, Inner WBWA, Inner-shareable
+	// 2. TCR: 39-bit VA for TTBR0/1, 4K granule, Inner WBWA, Inner-shareable
 	const uint64_t T0SZ = 25, T1SZ = 25;
 	const uint64_t IRGN_WBWA = 1, ORGN_WBWA = 1, SH_INNER = 3;
 	const uint64_t TG0_4K = 0ULL << 14;
@@ -182,19 +170,19 @@ void mm_init(void) {
 	uint64_t tcr = 0 | (T0SZ) | (IRGN_WBWA << 8) | (ORGN_WBWA << 10) | (SH_INNER << 12) | TG0_4K |
 	               (T1SZ << 16) | (IRGN_WBWA << 24) | (ORGN_WBWA << 26) | (SH_INNER << 28) | TG1_4K;
 	tcr |= IPS_40BIT;
-	printk("mm: msr_tcr_el1 %llx\n", tcr);
+	printk("vm: msr_tcr_el1 %llx\n", tcr);
 	msr_tcr_el1(tcr);
 	isb();
 
-	// 6) set TTBR0 to the kernel root
-	printk("mm: msr_tbr0_el1\n");
-	msr_ttbr0_el1(kernel_root_table);
+	// 3. set TTBR0 to the kernel root
+	printk("vm: msr_tbr0_el1\n");
+	msr_ttbr0_el1(root_table);
 	isb();
 
-	// 7) Enable MMU + caches
+	// 4. Enable MMU + caches
 	uint64_t sctlr = mrs_sctlr_el1();
 	sctlr |= (1ULL << 0) | (1ULL << 2) | (1ULL << 12); /* M: MMU enable; C: data cache; I: icache */
-	printk("mm: msr_sctlr_el1: %llx\n", sctlr);
+	printk("vm: msr_sctlr_el1: %llx\n", sctlr);
 	msr_sctlr_el1(sctlr);
 	isb();
 }

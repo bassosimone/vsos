@@ -5,6 +5,7 @@
 #include <kernel/boot/boot.h>   // for __kernel_base
 #include <kernel/core/printk.h> // for printk
 #include <kernel/mm/mm.h>       // for mm_map_identity
+#include <kernel/mm/page.h>     // for page_alloc
 #include <kernel/mm/vm.h>       // for __vm_direct_map
 #include <kernel/trap/trap.h>   // for trap_init_mm
 #include <kernel/tty/uart.h>    // for uart_init_mm
@@ -36,4 +37,17 @@ void __vm_map_kernel_memory(uintptr_t root_table) {
 void __vm_map_devices(uintptr_t root_table) {
 	trap_init_mm(root_table);
 	uart_init_mm(root_table);
+}
+
+void vm_switch(void) {
+	// 1. create the root table
+	uintptr_t root_table = page_must_alloc(PAGE_ALLOC_WAIT);
+	printk("vm: root_table %llx\n", root_table);
+
+	// 2. install stuff inside the root table
+	__vm_map_kernel_memory(root_table);
+	__vm_map_devices(root_table);
+
+	// 3. cross our fingers and geronimoooooooooo
+	__vm_switch_to_virtual(root_table);
 }
