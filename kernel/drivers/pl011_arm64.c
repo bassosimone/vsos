@@ -80,7 +80,7 @@ void pl011_init_early(struct pl011_device *dev) {
 void pl011_init_mm(struct pl011_device *dev, struct vm_root_pt root) {
 	uintptr_t limit = memory_limit(dev->base);
 	printk("%s: mm_map_identity %llx - %llx\n", dev->name, dev->base, limit);
-	mm_map_identity(root.table, dev->base, limit, MM_FLAG_DEVICE | MM_FLAG_WRITE);
+	mm_map_identity(root, dev->base, limit, MM_FLAG_DEVICE | MM_FLAG_WRITE);
 }
 
 // UARTCLR_H bit to enable the FIFO.

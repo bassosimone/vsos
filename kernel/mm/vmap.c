@@ -8,22 +8,22 @@
 
 #include <kernel/mm/mm.h> // for mm_map_identity, etc.
 
-void mm_virt_page_map(uintptr_t table, page_addr_t paddr, uintptr_t vaddr, vm_map_flags_t flags) {
+void __vm_map_explicit(struct vm_root_pt root, page_addr_t paddr, uintptr_t vaddr, vm_map_flags_t flags) {
 	// 1. make sure all the addresses are aligned with the page size
-	KERNEL_ASSERT(__builtin_is_aligned(table, MM_PAGE_SIZE));
-	KERNEL_ASSERT(__builtin_is_aligned(paddr, MM_PAGE_SIZE));
-	KERNEL_ASSERT(__builtin_is_aligned(vaddr, MM_PAGE_SIZE));
+	KERNEL_ASSERT(__builtin_is_aligned(root.table, PAGE_SIZE));
+	KERNEL_ASSERT(__builtin_is_aligned(paddr, PAGE_SIZE));
+	KERNEL_ASSERT(__builtin_is_aligned(vaddr, PAGE_SIZE));
 
 	// 2. let the MD implementation finish the job
-	__mm_virt_page_map_assume_aligned(table, paddr, vaddr, flags);
+	__vm_map_explicit_assume_aligned(root, paddr, vaddr, flags);
 }
 
-void mm_map_identity(uintptr_t table, page_addr_t start, uintptr_t end, vm_map_flags_t flags) {
+void mm_map_identity(struct vm_root_pt root, page_addr_t start, uintptr_t end, vm_map_flags_t flags) {
 	uint64_t aligned_start = mm_align_down(start);
 	uint64_t aligned_end = mm_align_up(end);
 	printk("  mm_map_identity: table=%llx, start=%llx, aligned_start=%llx, end=%llx, aligned_end=%llx, "
 	       "size=%lld, aligned_size=%lld, flags=%llx\n",
-	       table,
+	       root.table,
 	       start,
 	       aligned_start,
 	       end,
@@ -33,6 +33,6 @@ void mm_map_identity(uintptr_t table, page_addr_t start, uintptr_t end, vm_map_f
 	       flags);
 	for (; aligned_start < aligned_end; aligned_start += MM_PAGE_SIZE) {
 		printk("    %llx => %llx\n", aligned_start, aligned_start);
-		__mm_virt_page_map_assume_aligned(table, aligned_start, aligned_start, flags);
+		__vm_map_explicit_assume_aligned(root, aligned_start, aligned_start, flags);
 	}
 }

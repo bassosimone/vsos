@@ -111,10 +111,10 @@ static uint64_t make_table_desc(uintptr_t paddr) {
 }
 
 // The caller MUST already have checked that the addresses are all aligned.
-void __mm_virt_page_map_assume_aligned(uintptr_t table,
-                                       page_addr_t paddr,
-                                       uintptr_t vaddr,
-                                       vm_map_flags_t flags) {
+void __vm_map_explicit_assume_aligned(struct vm_root_pt root,
+                                      page_addr_t paddr,
+                                      uintptr_t vaddr,
+                                      vm_map_flags_t flags) {
 	// Step 0: validate assumptions
 	KERNEL_ASSERT(PAGE_SIZE == 4096);
 
@@ -125,7 +125,7 @@ void __mm_virt_page_map_assume_aligned(uintptr_t table,
 	printk("      vaddr %llx => l1_idx %llx l2_idx %llx l3_idx %llx\n", vaddr, l1_idx, l2_idx, l3_idx);
 
 	// Step 2: walk L1
-	uint64_t *l1 = (uint64_t *)__vm_direct_map(table);
+	uint64_t *l1 = (uint64_t *)__vm_direct_map(root.table);
 	if ((l1[l1_idx] & ARM64_PTE_VALID) == 0) {
 		uintptr_t l2_phys = page_must_alloc(PAGE_ALLOC_WAIT);
 		l1[l1_idx] = make_table_desc(l2_phys);

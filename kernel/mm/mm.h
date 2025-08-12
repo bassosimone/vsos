@@ -21,13 +21,13 @@
 #define mm_align_up vm_align_up
 
 // Maps a physical page address to a virtual page address using the given top-level table.
-void mm_virt_page_map(uintptr_t table, page_addr_t paddr, uintptr_t vaddr, mm_flags_t flags);
+#define mm_virt_page_map __vm_map_explicit
 
 // Internal machine dependent mapping implementation that assumes that
 // we have already checked that arguments are correctly aligned
-void __mm_virt_page_map_assume_aligned(uintptr_t table, page_addr_t paddr, uintptr_t vaddr, mm_flags_t flags);
+#define __mm_virt_page_map_assume_aligned __vm_map_explicit_assume_aligned
 
 // Maps maps the pages between the given start and end using identity mapping.
-void mm_map_identity(uintptr_t table, uintptr_t start, uintptr_t end, mm_flags_t flags);
+void mm_map_identity(struct vm_root_pt root, uintptr_t start, uintptr_t end, mm_flags_t flags);
 
 #endif // KERNEL_MM_MM_H

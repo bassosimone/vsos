@@ -30,11 +30,11 @@ void gicv2_init_struct(struct gicv2_device *dev, uintptr_t gicc_base, uintptr_t 
 void gicv2_init_mm(struct gicv2_device *dev, struct vm_root_pt root) {
 	uintptr_t gicc_limit = gicc_memory_limit(dev->gicc_base);
 	printk("%s: gicv2: mm_map_identity GICC_BASE %llx - %llx\n", dev->name, dev->gicc_base, gicc_limit);
-	mm_map_identity(root.table, dev->gicc_base, gicc_limit, MM_FLAG_DEVICE | MM_FLAG_WRITE);
+	mm_map_identity(root, dev->gicc_base, gicc_limit, MM_FLAG_DEVICE | MM_FLAG_WRITE);
 
 	uintptr_t gicd_limit = gicd_memory_limit(dev->gicd_base);
 	printk("%s: gicv2: mm_map_identity GICD_BASE %llx - %llx\n", dev->name, dev->gicd_base, gicd_limit);
-	mm_map_identity(root.table, dev->gicd_base, gicd_limit, MM_FLAG_DEVICE | MM_FLAG_WRITE);
+	mm_map_identity(root, dev->gicd_base, gicd_limit, MM_FLAG_DEVICE | MM_FLAG_WRITE);
 }
 
 // GICC_CTRL: CPU interface control register.

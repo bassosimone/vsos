@@ -4,6 +4,8 @@
 #ifndef KERNEL_MM_VM_H
 #define KERNEL_MM_VM_H
 
+#include <kernel/mm/page.h> // for page_addr_t
+
 #include <sys/param.h> // for PAGE_SIZE
 #include <sys/types.h> // for uintptr_t
 
@@ -39,6 +41,20 @@ typedef uint64_t vm_map_flags_t;
 //
 // Called by boot code when the time is ripe.
 void vm_switch(void);
+
+// Explicitly sets a VM mapping between paddr and vaddr using the root page table and flags.
+//
+// Consumers should generally use higher level APIs such as vm_map.
+void __vm_map_explicit(struct vm_root_pt root, page_addr_t paddr, uintptr_t vaddr, vm_map_flags_t flags);
+
+// Internal machine dependent mapping implementation that assumes that
+// we have already checked that arguments are correctly aligned.
+//
+// Prefer __vm_map_explicit to calling this function.
+void __vm_map_explicit_assume_aligned(struct vm_root_pt root,
+                                      page_addr_t paddr,
+                                      uintptr_t vaddr,
+                                      vm_map_flags_t flags);
 
 // Returns the kernel-internal direct mapping view of addr.
 //
