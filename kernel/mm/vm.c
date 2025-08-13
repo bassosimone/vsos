@@ -4,7 +4,6 @@
 
 #include <kernel/boot/boot.h>   // for __kernel_base
 #include <kernel/core/printk.h> // for printk
-#include <kernel/mm/mm.h>       // for mm_map_identity
 #include <kernel/mm/page.h>     // for page_alloc
 #include <kernel/mm/vm.h>       // for __vm_direct_map
 #include <kernel/trap/trap.h>   // for trap_init_mm
@@ -19,20 +18,22 @@ uintptr_t __vm_direct_map(uintptr_t phys_addr) {
 
 // Install the memory map for the kernel memory.
 static inline void __vm_map_kernel_memory(struct vm_root_pt root) {
+	vm_map_flags_t flags = VM_MAP_FLAG_PANIC_ON_ERROR;
+
 	printk("vm: mapping __kernel_base %llx -> __kernel_end %llx\n", __kernel_base, __kernel_end);
-	mm_map_identity(root, (uint64_t)__kernel_base, (uint64_t)__kernel_end, MM_FLAG_EXEC);
+	(void)vm_map(root, (uint64_t)__kernel_base, (uint64_t)__kernel_end, VM_MAP_FLAG_EXEC | flags, 0);
 
 	printk("vm: mapping __rodata_base %llx -> __rodata_end %llx\n", __rodata_base, __rodata_end);
-	mm_map_identity(root, (uint64_t)__rodata_base, (uint64_t)__rodata_end, 0);
+	(void)vm_map(root, (uint64_t)__rodata_base, (uint64_t)__rodata_end, 0 | flags, 0);
 
 	printk("vm: mapping __data_base %llx -> __data_end %llx\n", __data_base, __data_end);
-	mm_map_identity(root, (uint64_t)__data_base, (uint64_t)__data_end, MM_FLAG_WRITE);
+	(void)vm_map(root, (uint64_t)__data_base, (uint64_t)__data_end, VM_MAP_FLAG_WRITE | flags, 0);
 
 	printk("vm: mapping __bss_base %llx -> __bss_end %llx\n", __bss_base, __bss_end);
-	mm_map_identity(root, (uint64_t)__bss_base, (uint64_t)__bss_end, MM_FLAG_WRITE);
+	(void)vm_map(root, (uint64_t)__bss_base, (uint64_t)__bss_end, VM_MAP_FLAG_WRITE | flags, 0);
 
 	printk("vm: mapping __stack_bottom %llx -> __stack_top %llx\n", __stack_bottom, __stack_top);
-	mm_map_identity(root, (uint64_t)__stack_bottom, (uint64_t)__stack_top, MM_FLAG_WRITE);
+	(void)vm_map(root, (uint64_t)__stack_bottom, (uint64_t)__stack_top, VM_MAP_FLAG_WRITE | flags, 0);
 }
 
 // Requests the devices to install their memory map.
@@ -65,14 +66,14 @@ void __vm_map_explicit(struct vm_root_pt root, page_addr_t paddr, uintptr_t vadd
 	__vm_map_explicit_assume_aligned(root, paddr, vaddr, flags);
 }
 
-int64_t vm_map(struct vm_root_pt root,
-               page_addr_t start,
-               uintptr_t end,
-               vm_map_flags_t flags,
-               page_addr_t *remapped) {
-	KERNEL_ASSERT(mm_align_down(start) == start);
+static inline int64_t __vm_map(struct vm_root_pt root,
+                               page_addr_t start,
+                               uintptr_t end,
+                               vm_map_flags_t flags,
+                               page_addr_t *remapped) {
+	KERNEL_ASSERT(vm_align_down(start) == start);
 
-	uint64_t aligned_end = mm_align_up(end);
+	uint64_t aligned_end = vm_align_up(end);
 	printk("  vm_map: table=%llx, start=%llx, end=%llx, aligned_end=%llx, "
 	       "size=%lld, aligned_size=%lld, flags=%llx\n",
 	       root.table,
@@ -83,18 +84,33 @@ int64_t vm_map(struct vm_root_pt root,
 	       aligned_end - start,
 	       flags);
 
+	// set a default if the span is zero
 	if (remapped != 0) {
 		*remapped = __vm_direct_map(start);
 	}
 
+	bool saved = false;
 	for (; start < aligned_end; start += MM_PAGE_SIZE) {
-		uintptr_t dest = __vm_direct_map(start);
-		__vm_map_explicit_assume_aligned(root, start, dest, flags);
-		printk("    %llx => %llx\n", start, dest);
-		if (remapped != 0) {
-			*remapped = start;
+		uintptr_t vaddr = __vm_direct_map(start);
+		__vm_map_explicit_assume_aligned(root, start, vaddr, flags);
+		printk("    %llx => %llx\n", start, vaddr);
+		if (remapped != 0 && !saved) {
+			*remapped = vaddr;
+			saved = true;
 		}
 	}
 
 	return 0;
+}
+
+int64_t vm_map(struct vm_root_pt root,
+               page_addr_t start,
+               uintptr_t end,
+               vm_map_flags_t flags,
+               page_addr_t *remapped) {
+	int rc = __vm_map(root, start, end, flags, remapped);
+	if ((flags & VM_MAP_FLAG_PANIC_ON_ERROR) != 0) {
+		KERNEL_ASSERT(rc == 0);
+	}
+	return rc;
 }

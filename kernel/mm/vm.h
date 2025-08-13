@@ -15,6 +15,7 @@
 #define VM_MAP_FLAG_EXEC (1 << 2)
 #define VM_MAP_FLAG_USER (1 << 3)
 #define VM_MAP_FLAG_DEVICE (1 << 4)
+#define VM_MAP_FLAG_PANIC_ON_ERROR (1 << 5)
 
 // Ensure that the page is a power of two.
 static_assert(__builtin_popcount(PAGE_SIZE) == 1);
@@ -46,15 +47,19 @@ void vm_switch(void);
 //
 // The root argument must be the root page table.
 //
-// The start argument must be aligned on a page boundary or we'll panic.
+// The start_addr argument must be aligned on a page boundary or we'll panic.
 //
-// The end argument is automatically aligned up to the next page.
+// The end_addr argument is automatically aligned up to the next page.
 //
-// The remapped argument may be 0. Otherwise we store in there the remapped address.
+// The remapped_addr argument may be 0. If nonzero, we'll store
+// in there the remapped start address of the region.
 //
 // Returns 0 on success and a negative errno value otherwise.
-int64_t
-vm_map(struct vm_root_pt root, page_addr_t start, uintptr_t end, vm_map_flags_t flags, page_addr_t *remapped);
+int64_t vm_map(struct vm_root_pt root,
+               page_addr_t start_addr,
+               uintptr_t end_addr,
+               vm_map_flags_t flags,
+               page_addr_t *remapped_addr);
 
 // Explicitly sets a VM mapping between paddr and vaddr using the root page table and flags.
 //
