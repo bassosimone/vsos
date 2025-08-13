@@ -3,7 +3,7 @@
     // SPDX-License-Identifier: MIT
 
     .section .rodata
-    .global _shell_bin, _shell_bin_end
-_shell_bin:
-    .incbin "shell.bin"
-_shell_bin_end:
+    .global __shell_start, __shell_end
+__shell_start:
+    .incbin "shell.elf"
+__shell_end:

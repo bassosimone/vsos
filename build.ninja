@@ -22,10 +22,6 @@ rule user_ld
   command = ld.lld -T shell/layout_arm64.ld -nostdlib $in -o $out
   description = LD USER $out
 
-rule user_objcopy
-  command = llvm-objcopy -O binary $in $out
-  description = OBJCOPY USER $out
-
 rule kernel_incbin
   command = clang -I. -Iinclude -O2 -target aarch64-none-elf -c $in -o $out
   description = CC INCBIN $out
@@ -48,7 +44,6 @@ build shell.elf: user_ld $
     libc/unistd/syscall_arm64.o $
     libc/unistd/write.o $
     shell/shell.o
-build shell.bin: user_objcopy shell.elf
 
 build kernel/boot/boot_arm64.o: kernel_cc kernel/boot/boot_arm64.c
 build kernel/boot/boot.o: kernel_cc kernel/boot/boot.c
@@ -60,6 +55,8 @@ build kernel/core/printk.o: kernel_cc kernel/core/printk.c
 
 build kernel/drivers/gicv2_arm64.o: kernel_cc kernel/drivers/gicv2_arm64.c
 build kernel/drivers/pl011_arm64.o: kernel_cc kernel/drivers/pl011_arm64.c
+
+build kernel/init/initrd.o: kernel_cc kernel/init/initrd.c
 
 build kernel/mm/vm_arm64.o: kernel_cc kernel/mm/vm_arm64.c
 build kernel/mm/page.o: kernel_cc kernel/mm/page.c
@@ -78,7 +75,7 @@ build kernel/trap/vector_arm64.o: kernel_cc kernel/trap/vector_arm64.S
 
 build kernel/tty/uart_arm64.o: kernel_cc kernel/tty/uart_arm64.c
 
-build kernel/uspace/shell.o: kernel_incbin kernel/uspace/shell.S | shell.bin
+build kernel/uspace/shell.o: kernel_incbin kernel/uspace/shell.S | shell.elf
 
 build libc/string/memcpy_kernel.o: kernel_cc libc/string/memcpy.c
 build libc/string/memset_kernel.o: kernel_cc libc/string/memset.c
@@ -92,6 +89,7 @@ build kernel.elf: kernel_ld $
   kernel/core/printk.o $
   kernel/drivers/gicv2_arm64.o $
   kernel/drivers/pl011_arm64.o $
+  kernel/init/initrd.o $
   kernel/mm/page.o $
   kernel/mm/vm.o $
   kernel/mm/vm_arm64.o $

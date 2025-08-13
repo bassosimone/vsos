@@ -7,6 +7,7 @@
 #include <kernel/core/assert.h> // for KERNEL_ASSERT
 #include <kernel/core/panic.h>  // for panic
 #include <kernel/core/printk.h> // for printk
+#include <kernel/init/initrd.h> // for initrd_read_early
 #include <kernel/mm/page.h>     // for page_alloc
 #include <kernel/mm/vm.h>       // for vm_switch
 #include <kernel/sched/sched.h> // whole subsystem API
@@ -87,6 +88,11 @@ static void __kernel_zygote(void *opaque) {
 	// 5. create a thread that echoes what we write.
 	tid = sched_thread_start(_echo_thread, /* opaque */ 0, /* flags */ 0);
 	printk("started echo thread: %d\n", tid);
+
+	// 6. load the initial ramdisk
+	struct initrd_info info = {.base = 0, .count = 0};
+	int rc = initrd_load(&info);
+	KERNEL_ASSERT(rc == 0);
 }
 
 [[noreturn]] void __kernel_main(void) {

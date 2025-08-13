@@ -46,6 +46,12 @@ extern char __free_ram_end[];
 // Location of the interrupt vectors in memory.
 extern char __vectors_el1[];
 
+// Begin of the embedded shell inside the `.rodata` section.
+extern char __shell_start[];
+
+// End of the embedded shell inside the `.rodata` section.
+extern char __shell_end[];
+
 // The machine independent initialization function.
 [[noreturn]] void __kernel_main(void);
 
