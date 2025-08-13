@@ -9,7 +9,10 @@
 #include <kernel/trap/trap.h>   // for trap_init_mm
 #include <kernel/tty/uart.h>    // for uart_init_mm
 
+#include <sys/param.h> // for PAGE_SIZE
 #include <sys/types.h> // for uintptr_t
+
+#include <string.h> // for __bzero
 
 uintptr_t __vm_direct_map(uintptr_t phys_addr) {
 	// TODO(bassosimone): implement direct mapping
@@ -45,6 +48,7 @@ static inline void __vm_map_devices(struct vm_root_pt root) {
 void vm_switch(void) {
 	// 1. create the root table
 	uintptr_t table = page_must_alloc(PAGE_ALLOC_WAIT);
+	__bzero((void *)table, PAGE_SIZE);
 	printk("vm: root_table %llx\n", table);
 	struct vm_root_pt root = {.table = table};
 

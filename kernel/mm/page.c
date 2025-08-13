@@ -7,7 +7,6 @@
 #include <kernel/core/printk.h>   // for printk
 #include <kernel/core/spinlock.h> // for struct spinlock
 #include <kernel/mm/page.h>       // for page_alloc
-#include <kernel/mm/vm.h>         // for __vm_direct_map
 #include <kernel/sched/sched.h>   // for sched_thread_yield
 
 #include <sys/errno.h> // for EAGAIN
@@ -17,8 +16,8 @@
 #include <string.h> // for __bzero
 
 /*-
-  Memory Layout
-  -------------
+  Physical Memory Layout
+  ----------------------
 
   We have 0x4000000 byte of free RAM starting at __free_ram_start
   and ending at __free_ram_end. This memory should be aligned.
@@ -171,7 +170,7 @@ static inline page_addr_t make_page_addr(size_t index) {
 	return addr;
 }
 
-static inline int64_t __page_alloc(page_addr_t *addr, uint64_t flags) {
+int64_t page_alloc(page_addr_t *addr, uint64_t flags) {
 	KERNEL_ASSERT(addr != 0);
 	*addr = 0; // Avoid possible UB
 
@@ -203,15 +202,6 @@ static inline int64_t __page_alloc(page_addr_t *addr, uint64_t flags) {
 		printk("page_alloc: %llx => %llx\n", index, *addr);
 		return 0;
 	}
-}
-
-int64_t page_alloc(page_addr_t *addr, uint64_t flags) {
-	KERNEL_ASSERT(addr != 0);
-	int64_t retval = __page_alloc(addr, flags);
-	if (retval == 0 && (flags & PAGE_ALLOC_DONTCLEAR) == 0) {
-		__bzero((char *)__vm_direct_map(*addr), PAGE_SIZE);
-	}
-	return retval;
 }
 
 void page_free(page_addr_t addr) {

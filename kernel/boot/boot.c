@@ -13,9 +13,10 @@
 #include <kernel/trap/trap.h>   // for trap_init_irqs
 #include <kernel/tty/uart.h>    // for uart_init_early
 
-#include <string.h>    // for memset
 #include <sys/param.h> // for HZ
 #include <sys/types.h> // for size_t
+
+#include <string.h> // for memset
 
 static void thread_hello(void *opaque) {
 	(void)opaque;
@@ -95,10 +96,11 @@ static inline void __page_alloc_self_test() {
 		int64_t rc = page_alloc(&addr, /* flags */ 0);
 		KERNEL_ASSERT(rc == 0);
 		__self_test_mem[idx] = addr;
+		__bzero((void *)addr, PAGE_SIZE); // touch the page to show we can
 	}
 	page_debug_printk();
 	for (size_t idx = 0; idx < 500; idx++) {
-		page_free(__self_test_mem[idx]);
+		page_free(__self_test_mem[idx]); // dealloc to show we can
 	}
 	page_debug_printk();
 }
