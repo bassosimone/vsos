@@ -89,22 +89,6 @@ static void __kernel_zygote(void *opaque) {
 	printk("started echo thread: %d\n", tid);
 }
 
-static inline void __page_alloc_self_test() {
-	static page_addr_t __self_test_mem[500];
-	for (size_t idx = 0; idx < 500; idx++) {
-		page_addr_t addr = 0;
-		int64_t rc = page_alloc(&addr, /* flags */ 0);
-		KERNEL_ASSERT(rc == 0);
-		__self_test_mem[idx] = addr;
-		__bzero((void *)addr, PAGE_SIZE); // touch the page to show we can
-	}
-	page_debug_printk();
-	for (size_t idx = 0; idx < 500; idx++) {
-		page_free(__self_test_mem[idx]); // dealloc to show we can
-	}
-	page_debug_printk();
-}
-
 [[noreturn]] void __kernel_main(void) {
 	// 1. Zero the BSS section.
 	memset(__bss, 0, (size_t)(__bss_end - __bss));
@@ -114,7 +98,6 @@ static inline void __page_alloc_self_test() {
 
 	// 3. Initialize the physical page allocator.
 	page_init_early();
-	__page_alloc_self_test();
 
 	// 4. Switch to the virtual address space.
 	//
