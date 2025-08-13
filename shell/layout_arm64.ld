@@ -1,3 +1,7 @@
+/* File: shell/layour_arm64.ld
+   Purpose: loader script for the shell
+   SPDX-License-Identifier: MIT
+   Adapted from: https://github.com/nuta/operating-system-in-1000-lines */
 ENTRY(_start)
 
 SECTIONS {
