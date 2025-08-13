@@ -7,7 +7,11 @@
 ENTRY(boot)
 
 SECTIONS {
-    /* Load address: match QEMU's default load address for `-kernel kernel.bin` */
+    /* Load address: match QEMU's default load address for `-kernel kernel.bin`.
+
+       Note that, since this address is explicitly specified, it would not actually be
+       possible to relocate the kernel. In other words, this means we're forced to using
+       the identity mapping for the kernel's address space. */
     . = 0x40080000;
     __kernel_base = .;
 
