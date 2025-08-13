@@ -9,13 +9,20 @@
 #include <sys/param.h> // for PAGE_SIZE
 #include <sys/types.h> // for uintptr_t
 
-// Portable definitions of page mapping flags.
+// Flag indicating that a page is present.
 #define VM_MAP_FLAG_PRESENT (1 << 0)
+
+// Flag indicating that a page is writable.
 #define VM_MAP_FLAG_WRITE (1 << 1)
+
+// Flag indicating that a page is executable.
 #define VM_MAP_FLAG_EXEC (1 << 2)
+
+// Flag indicating that a page is owned by userspace.
 #define VM_MAP_FLAG_USER (1 << 3)
+
+// Flag indicating a page used for MMIO.
 #define VM_MAP_FLAG_DEVICE (1 << 4)
-#define VM_MAP_FLAG_PANIC_ON_ERROR (1 << 5)
 
 // Ensure that the page is a power of two.
 static_assert(__builtin_popcount(PAGE_SIZE) == 1);
@@ -40,10 +47,14 @@ typedef uint64_t vm_map_flags_t;
 
 // Initialization function that switches from physical to virtual addressing.
 //
+// We are forced to use identity mapping since the linker script uses a fixed address.
+//
+// Address won't change after this function, but the MMU will be online.
+//
 // Called by boot code when the time is ripe.
 void vm_switch(void);
 
-// Remaps the range of physical addresses starting at start and ending at end to remapped.
+// Maps a memory [start, end) memory range using the given flags.
 //
 // The root argument must be the root page table.
 //
@@ -51,15 +62,8 @@ void vm_switch(void);
 //
 // The end_addr argument is automatically aligned up to the next page.
 //
-// The remapped_addr argument may be 0. If nonzero, we'll store
-// in there the remapped start address of the region.
-//
-// Returns 0 on success and a negative errno value otherwise.
-int64_t vm_map(struct vm_root_pt root,
-               page_addr_t start_addr,
-               uintptr_t end_addr,
-               vm_map_flags_t flags,
-               page_addr_t *remapped_addr);
+// We are using identity mapping so the addresses won't change.
+void vm_map(struct vm_root_pt root, page_addr_t start, uintptr_t end, vm_map_flags_t flags);
 
 // Explicitly sets a VM mapping between paddr and vaddr using the root page table and flags.
 //
@@ -75,18 +79,9 @@ void __vm_map_explicit_assume_aligned(struct vm_root_pt root,
                                       uintptr_t vaddr,
                                       vm_map_flags_t flags);
 
-// Returns the kernel-internal direct mapping view of addr.
+// Internal machine-dependent function for using the MMU.
 //
-// The parameter is a physical address.
-//
-// The return value is a virtual address.
-//
-// Before intializing the VM, the direct mapping is the identity mapping.
-//
-// Afterwards, there is a fixed offset between virtual and physical.
-uintptr_t /* virt_addr */ __vm_direct_map(uintptr_t phys_addr);
-
-// Switches from the physical to the virtual address space.
-void __vm_switch_to_virtual(struct vm_root_pt pt);
+// Should only be called within this subsystem.
+void __vm_switch(struct vm_root_pt pt);
 
 #endif // KERNEL_MM_VM_H

@@ -121,46 +121,60 @@ void __vm_map_explicit_assume_aligned(struct vm_root_pt root,
 
 	// Step 1: resolve indices
 	uint64_t l1_idx = L1_INDEX(vaddr);
+	printk("      L1_INDEX(%llx) = %llx\n", vaddr, l1_idx);
+
 	uint64_t l2_idx = L2_INDEX(vaddr);
+	printk("      L2_INDEX(%llx) = %llx\n", vaddr, l2_idx);
+
 	uint64_t l3_idx = L3_INDEX(vaddr);
-	printk("      vaddr %llx => l1_idx %llx l2_idx %llx l3_idx %llx\n", vaddr, l1_idx, l2_idx, l3_idx);
+	printk("      L3_INDEX(%llx) = %llx\n", vaddr, l3_idx);
 
 	// Step 2: walk L1
-	uint64_t *l1 = (uint64_t *)__vm_direct_map(root.table);
-	if ((l1[l1_idx] & ARM64_PTE_VALID) == 0) {
+	uint64_t *l1_phys = (uint64_t *)root.table;
+	printk("      L1_PHYS = %llx\n", l1_phys);
+
+	uint64_t *l1_virt = l1_phys; // direct mapping
+	printk("      L1_VIRT = %llx\n", l1_virt);
+
+	if ((l1_virt[l1_idx] & ARM64_PTE_VALID) == 0) {
 		uintptr_t l2_phys = page_must_alloc(PAGE_ALLOC_WAIT);
 		__bzero((void *)l2_phys, PAGE_SIZE);
-		l1[l1_idx] = make_table_desc(l2_phys);
-		dsb_ishst(); // ensure table write is visible
+		l1_virt[l1_idx] = make_table_desc(l2_phys);
+		dsb_ishst(); // ensure visibility
 	}
-	printk("      l1[l1_idx] = %llx\n", l1[l1_idx]);
+	printk("      L1_VIRT[L1_INDEX] = %llx\n", l1_virt[l1_idx]);
 
 	// Step 3: walk L2
-	uint64_t *l2 = (uint64_t *)__vm_direct_map(l1[l1_idx] & ARM64_PTE_ADDR_MASK);
-	if ((l2[l2_idx] & ARM64_PTE_VALID) == 0) {
+	uint64_t *l2_phys = (uint64_t *)(l1_virt[l1_idx] & ARM64_PTE_ADDR_MASK);
+	printk("      L2_PHYS = %llx\n", l1_phys);
+
+	uint64_t *l2_virt = l2_phys; // direct mapping
+
+	if ((l2_virt[l2_idx] & ARM64_PTE_VALID) == 0) {
 		uintptr_t l3_phys = page_must_alloc(PAGE_ALLOC_WAIT);
 		__bzero((void *)l3_phys, PAGE_SIZE);
-		l2[l2_idx] = make_table_desc(l3_phys);
-		dsb_ishst(); // ensure table write is visible
+		l2_virt[l2_idx] = make_table_desc(l3_phys);
+		dsb_ishst(); // ensure visibility
 	}
-	printk("      l2[l2_idx] = %llx\n", l2[l2_idx]);
+	printk("      L2_VIRT[L2_INDEX] = %llx\n", l2_virt[l2_idx]);
 
-	// TODO(bassosimone): what should we do if the mapping already exists?
-	// Right now, we replace it but this feels very wrong!!!
+	// Step 4: try to insert the L3 leaf
+	uint64_t *l3_phys = (uint64_t *)(l2_virt[l2_idx] & ARM64_PTE_ADDR_MASK);
 
-	// Step 4: walk L3 (leaf)
-	uint64_t *l3 = (uint64_t *)__vm_direct_map(l2[l2_idx] & ARM64_PTE_ADDR_MASK);
-	uint64_t pte = make_leaf_pte(paddr, flags);
-	l3[l3_idx] = pte;
-	printk("      l3[l3_idx] = %llx\n", l3[l3_idx]);
-	dsb_ishst(); // ensure page mapping is visible
+	uint64_t *l3_virt = l3_phys; // direct mapping
+
+	KERNEL_ASSERT((l3_virt[l3_idx] & ARM64_PTE_VALID) == 0);
+
+	l3_virt[l3_idx] = make_leaf_pte(paddr, flags);
+	printk("      L3_VIRT[L3_INDEX] = %llx\n", l3_virt[l3_idx]);
+	dsb_ishst(); // ensure visibility
 
 	// TODO(bassosimone): as long as we are always creating new mappings
 	// and context switching with a single process, we do not need to add
-	// support for TLB invalidation in this code.
+	// support for TLB invalidation to this code.
 }
 
-void __vm_switch_to_virtual(struct vm_root_pt root) {
+void __vm_switch(struct vm_root_pt root) {
 	// 1. MAIR: idx0 Normal WBWA, idx1 Device-nGnRE
 	uint64_t mair = (MAIR_ATTR_NORMAL_WBWA << 0) | (MAIR_ATTR_DEVICE_nGnRE << 8);
 	printk("vm: msr_mair_el1 %llx\n", mair);

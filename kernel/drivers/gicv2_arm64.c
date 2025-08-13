@@ -27,15 +27,15 @@ void gicv2_init_struct(struct gicv2_device *dev, uintptr_t gicc_base, uintptr_t 
 }
 
 void gicv2_init_mm(struct gicv2_device *dev, struct vm_root_pt root) {
-	vm_map_flags_t flags = VM_MAP_FLAG_WRITE | VM_MAP_FLAG_DEVICE | VM_MAP_FLAG_PANIC_ON_ERROR;
+	vm_map_flags_t flags = VM_MAP_FLAG_WRITE | VM_MAP_FLAG_DEVICE;
 
 	uintptr_t gicc_limit = gicc_memory_limit(dev->gicc_base);
-	printk("%s: gicv2: mm_map_identity GICC_BASE %llx - %llx\n", dev->name, dev->gicc_base, gicc_limit);
-	(void)vm_map(root, dev->gicc_base, gicc_limit, flags, &dev->gicc_base);
+	printk("vm: GICC_BASE<%s> [%llx, %llx) => DEVICE|WRITE\n", dev->name, dev->gicc_base, gicc_limit);
+	vm_map(root, dev->gicc_base, gicc_limit, flags);
 
 	uintptr_t gicd_limit = gicd_memory_limit(dev->gicd_base);
-	printk("%s: gicv2: mm_map_identity GICD_BASE %llx - %llx\n", dev->name, dev->gicd_base, gicd_limit);
-	(void)vm_map(root, dev->gicd_base, gicd_limit, flags, &dev->gicd_base);
+	printk("vm: GICD_BASE<%s> [%llx, %llx)\n", dev->name, dev->gicd_base, gicd_limit);
+	vm_map(root, dev->gicd_base, gicd_limit, flags);
 }
 
 // GICC_CTRL: CPU interface control register.
