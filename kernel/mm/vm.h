@@ -42,6 +42,20 @@ typedef uint64_t vm_map_flags_t;
 // Called by boot code when the time is ripe.
 void vm_switch(void);
 
+// Remaps the range of physical addresses starting at start and ending at end to remapped.
+//
+// The root argument must be the root page table.
+//
+// The start argument must be aligned on a page boundary or we'll panic.
+//
+// The end argument is automatically aligned up to the next page.
+//
+// The remapped argument may be 0. Otherwise we store in there the remapped address.
+//
+// Returns 0 on success and a negative errno value otherwise.
+int64_t
+vm_map(struct vm_root_pt root, page_addr_t start, uintptr_t end, vm_map_flags_t flags, page_addr_t *remapped);
+
 // Explicitly sets a VM mapping between paddr and vaddr using the root page table and flags.
 //
 // Consumers should generally use higher level APIs such as vm_map.

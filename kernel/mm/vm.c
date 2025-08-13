@@ -64,3 +64,37 @@ void __vm_map_explicit(struct vm_root_pt root, page_addr_t paddr, uintptr_t vadd
 	// 2. let the MD implementation finish the job
 	__vm_map_explicit_assume_aligned(root, paddr, vaddr, flags);
 }
+
+int64_t vm_map(struct vm_root_pt root,
+               page_addr_t start,
+               uintptr_t end,
+               vm_map_flags_t flags,
+               page_addr_t *remapped) {
+	KERNEL_ASSERT(mm_align_down(start) == start);
+
+	uint64_t aligned_end = mm_align_up(end);
+	printk("  vm_map: table=%llx, start=%llx, end=%llx, aligned_end=%llx, "
+	       "size=%lld, aligned_size=%lld, flags=%llx\n",
+	       root.table,
+	       start,
+	       end,
+	       aligned_end,
+	       end - start,
+	       aligned_end - start,
+	       flags);
+
+	if (remapped != 0) {
+		*remapped = __vm_direct_map(start);
+	}
+
+	for (; start < aligned_end; start += MM_PAGE_SIZE) {
+		uintptr_t dest = __vm_direct_map(start);
+		__vm_map_explicit_assume_aligned(root, start, dest, flags);
+		printk("    %llx => %llx\n", start, dest);
+		if (remapped != 0) {
+			*remapped = start;
+		}
+	}
+
+	return 0;
+}
