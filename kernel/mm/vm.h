@@ -55,6 +55,9 @@ typedef uint64_t vm_map_flags_t;
 // Called by boot code when the time is ripe.
 void vm_switch(void);
 
+// Accessor function that returns the kernel root PT.
+struct vm_root_pt vm_kernel_root_pt(void);
+
 // Maps a memory [start, end) memory range using the given flags.
 //
 // The root argument must be the root page table.

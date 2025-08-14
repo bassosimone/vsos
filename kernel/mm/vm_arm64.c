@@ -195,7 +195,7 @@ void __vm_switch(struct vm_root_pt root) {
 	isb();
 
 	// 3. set TTBR0 to the kernel root
-	printk("vm: msr_tbr0_el1\n");
+	printk("vm: msr_ttbr0_el1\n");
 	msr_ttbr0_el1(root.table);
 	isb();
 
