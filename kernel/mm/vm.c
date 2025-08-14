@@ -37,19 +37,20 @@ void vm_map_devices(struct vm_root_pt root) {
 	uart_init_mm(root);
 }
 
-static struct vm_root_pt __root;
+uintptr_t __vm_kernel_root_pt;
 
 struct vm_root_pt vm_kernel_root_pt(void) {
-	KERNEL_ASSERT(__root.table != 0);
-	return __root;
+	KERNEL_ASSERT(__vm_kernel_root_pt != 0);
+	return (struct vm_root_pt){.table = __vm_kernel_root_pt};
 }
 
 void vm_switch(void) {
 	// 1. create the root table
+	KERNEL_ASSERT(__vm_kernel_root_pt == 0);
 	printk("vm: switching to virtual addresses... brace yourself\n");
-	uintptr_t table = page_must_alloc(PAGE_ALLOC_WAIT);
-	printk("vm: root_table %llx\n", table);
-	__root.table = table;
+	__vm_kernel_root_pt = page_must_alloc(PAGE_ALLOC_WAIT);
+	printk("vm: root_table %llx\n", __vm_kernel_root_pt);
+	struct vm_root_pt __root = vm_kernel_root_pt();
 
 	// 2. install stuff inside the root table
 	vm_map_kernel_memory(__root);

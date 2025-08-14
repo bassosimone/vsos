@@ -15,11 +15,13 @@ struct trap_frame {
 	uint64_t spsr_el1;
 	uint64_t fpcr;
 	uint64_t fpsr;
+	uint64_t ttbr0_el1;
+	uint64_t __unused_padding;
 } __attribute__((aligned(16)));
 
 // Make sure the C struct is synchronized with the assembly code
 static_assert(alignof(struct trap_frame) == 16, "trap_frame must be 16B aligned");
-static_assert(sizeof(struct trap_frame) == 800, "trap_frame must be 800 bytes");
+static_assert(sizeof(struct trap_frame) == 816, "trap_frame must be 816 bytes");
 static_assert(__builtin_offsetof(struct trap_frame, x) == 0, "x offset");
 static_assert(__builtin_offsetof(struct trap_frame, sp_el0) == 248, "sp_el0 offset");
 static_assert(__builtin_offsetof(struct trap_frame, q) == 256, "q block offset");
@@ -27,6 +29,8 @@ static_assert(__builtin_offsetof(struct trap_frame, elr_el1) == 768, "elr_el1 of
 static_assert(__builtin_offsetof(struct trap_frame, spsr_el1) == 776, "spsr_el1 offset");
 static_assert(__builtin_offsetof(struct trap_frame, fpcr) == 784, "fpcr offset");
 static_assert(__builtin_offsetof(struct trap_frame, fpsr) == 792, "fpsr offset");
+static_assert(__builtin_offsetof(struct trap_frame, ttbr0_el1) == 800, "ttbr0_el1 offset");
+static_assert(__builtin_offsetof(struct trap_frame, __unused_padding) == 808, "__unused_padding offset");
 
 // Generic interrupt service routine.
 //

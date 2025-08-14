@@ -17,7 +17,7 @@ __trap_handle_el1h_irq:
     // Basically this means no nested interrupts.
 
     // Bump the stack frame to make space for all the variables to save.
-    sub sp, sp, #800
+    sub sp, sp, #816
 
     // Save general purpose registers and user stack pointer.
     stp x0,  x1,  [sp, #0]
@@ -68,9 +68,27 @@ __trap_handle_el1h_irq:
     mrs x20, fpsr
     str x20, [sp, #792]
 
+    // Save the TTBR0_EL1 and the padding
+    mrs x9, ttbr0_el1
+    mov x10, #0
+    str x9, [sp, #800]
+    str x10, [sp, #808]
+
+    // Switch page tables and use the kernel one
+    ldr x11, =__vm_kernel_root_pt
+    ldr x11, [x11]
+    msr ttbr0_el1, x11
+    isb
+
     // Handle the interrupt passing the frame as context
     mov x0, sp
     bl  __trap_isr
+
+    // Restore TTBR0_EL1 and the padding
+    ldr x10, [sp, #808]
+    ldr x9, [sp, #800]
+    msr ttbr0_el1, x9
+    isb
 
     // Restore floating point control/status registers
     ldr x20, [sp, #792]
@@ -122,7 +140,7 @@ __trap_handle_el1h_irq:
     ldp x0,  x1,  [sp, #0]
 
     // Unwind the stack
-    add sp, sp, #800
+    add sp, sp, #816
 
     // Return from exception
     eret
@@ -143,7 +161,7 @@ __trap_handle_synchronous:
     // Basically this means no nested interrupts.
 
     // Bump the stack frame to make space for all the variables to save.
-    sub sp, sp, #800
+    sub sp, sp, #816
 
     // Save general purpose registers and user stack pointer.
     stp x0,  x1,  [sp, #0]
@@ -194,6 +212,18 @@ __trap_handle_synchronous:
     mrs x20, fpsr
     str x20, [sp, #792]
 
+    // Save the TTBR0_EL1 and the padding
+    mrs x9, ttbr0_el1
+    mov x10, #0
+    str x9, [sp, #800]
+    str x10, [sp, #808]
+
+    // Switch page tables and use the kernel one
+    ldr x11, =__vm_kernel_root_pt
+    ldr x11, [x11]
+    msr ttbr0_el1, x11
+    isb
+
     // Handle the syscall passing the frame, esr, and far
     mov x0, sp
     mrs x1, esr_el1
@@ -214,7 +244,13 @@ __trap_handle_synchronous:
     .type trap_restore_user_and_eret, %function
 trap_restore_user_and_eret:
     // Adjust the kernel stack back
-    add sp, x0, #800
+    add sp, x0, #816
+
+    // Restore TTBR0_EL1 and the padding
+    ldr x10, [sp, #808]
+    ldr x9, [sp, #800]
+    msr ttbr0_el1, x9
+    isb
 
     // Restore floating point control/status registers
     ldr x20, [x0, #792]

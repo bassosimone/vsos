@@ -107,4 +107,11 @@ void __vm_map_explicit_assume_aligned(struct vm_root_pt root, page_addr_t paddr,
 // Should only be called within this subsystem.
 void __vm_switch(struct vm_root_pt pt);
 
+// This variable contains the kernel root page table.
+//
+// In C code, use the vm_kernel_root_pt accessor instead.
+//
+// In assembly, well, you know what to do.
+extern uintptr_t __vm_kernel_root_pt;
+
 #endif // KERNEL_MM_VM_H
