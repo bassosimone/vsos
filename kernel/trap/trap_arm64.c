@@ -30,8 +30,11 @@
 // The global irq0 device driver attached to the GICCv2.
 struct gicv2_device irq0;
 
-void trap_init_mm(struct vm_root_pt root) {
+void trap_init_early(void) {
 	gicv2_init_struct(&irq0, GICC_BASE, GICD_BASE, "irq0");
+}
+
+void trap_init_mm(struct vm_root_pt root) {
 	gicv2_init_mm(&irq0, root);
 }
 
@@ -96,6 +99,6 @@ void __trap_ssr(struct trap_frame *frame, uint64_t esr, uint64_t far) {
 	// We pass the syscall number as x8.
 	//
 	// Keep in sync with `./libc/unistd/syscall_arm64.c`.
-	frame->x[0] = syscall(
-	    frame->x[8], frame->x[0], frame->x[1], frame->x[2], frame->x[3], frame->x[4], frame->x[5]);
+	frame->x[0] =
+	    syscall(frame->x[8], frame->x[0], frame->x[1], frame->x[2], frame->x[3], frame->x[4], frame->x[5]);
 }

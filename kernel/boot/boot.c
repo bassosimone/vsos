@@ -122,18 +122,21 @@ static void __kernel_zygote(void *opaque) {
 	// 3. Initialize the physical page allocator.
 	page_init_early();
 
-	// 4. Switch to the virtual address space.
+	// 4. Initialize trap handling structs.
+	trap_init_early();
+
+	// 5. Switch to the virtual address space.
 	//
 	// This is the place that makes everyone very nervous.
 	vm_switch();
 
-	// 5. Create the kernel zygote thread.
+	// 6. Create the kernel zygote thread.
 	//
 	// This will enable interrupts and finish bringing the kernel up and running
 	int64_t tid = sched_thread_start(__kernel_zygote, /* opaque */ 0, /* flags */ 0);
 	printk("created __kernel_zygote thread: %d\n", tid);
 
-	// 6. Run the thread scheduler.
+	// 7. Run the thread scheduler.
 	//
 	// Needs to happen before we enable interrupts.
 	sched_thread_run();

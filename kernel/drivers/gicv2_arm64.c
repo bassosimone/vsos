@@ -30,11 +30,15 @@ void gicv2_init_mm(struct gicv2_device *dev, struct vm_root_pt root) {
 	vm_map_flags_t flags = VM_MAP_FLAG_WRITE | VM_MAP_FLAG_DEVICE;
 
 	uintptr_t gicc_limit = gicc_memory_limit(dev->gicc_base);
-	printk("vm: GICC_BASE<%s> [%llx, %llx) => DEVICE|WRITE\n", dev->name, dev->gicc_base, gicc_limit);
+	printk("vm: <0x%llx> GICC_BASE<%s> [%llx, %llx) => DEVICE|WRITE\n",
+	       root.table,
+	       dev->name,
+	       dev->gicc_base,
+	       gicc_limit);
 	vm_map_range_identity(root, dev->gicc_base, gicc_limit, flags);
 
 	uintptr_t gicd_limit = gicd_memory_limit(dev->gicd_base);
-	printk("vm: GICD_BASE<%s> [%llx, %llx)\n", dev->name, dev->gicd_base, gicd_limit);
+	printk("vm: <0x%llx> GICD_BASE<%s> [%llx, %llx)\n", root.table, dev->name, dev->gicd_base, gicd_limit);
 	vm_map_range_identity(root, dev->gicd_base, gicd_limit, flags);
 }
 

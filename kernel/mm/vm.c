@@ -12,29 +12,27 @@
 #include <sys/param.h> // for PAGE_SIZE
 #include <sys/types.h> // for uintptr_t
 
-// Install the memory map for the kernel memory.
-static inline void __vm_map_kernel_memory(struct vm_root_pt root) {
-	printk("vm: .text [%llx, %llx) => EXEC\n", __kernel_base, __kernel_end);
+void vm_map_kernel_memory(struct vm_root_pt root) {
+	printk("vm: <0x%llx> .text [%llx, %llx) => EXEC\n", root.table, __kernel_base, __kernel_end);
 	vm_map_range_identity(root, (uint64_t)__kernel_base, (uint64_t)__kernel_end, VM_MAP_FLAG_EXEC);
 
-	printk("vm: .rodata [%llx, %llx) => 0\n", __rodata_base, __rodata_end);
+	printk("vm: <0x%llx> .rodata [%llx, %llx) => 0\n", root.table, __rodata_base, __rodata_end);
 	vm_map_range_identity(root, (uint64_t)__rodata_base, (uint64_t)__rodata_end, 0);
 
-	printk("vm: .data [%llx, %llx) => WRITE\n", __data_base, __data_end);
+	printk("vm: <0x%llx> .data [%llx, %llx) => WRITE\n", root.table, __data_base, __data_end);
 	vm_map_range_identity(root, (uint64_t)__data_base, (uint64_t)__data_end, VM_MAP_FLAG_WRITE);
 
-	printk("vm: .bss [%llx, %llx) => WRITE\n", __bss_base, __bss_end);
+	printk("vm: <0x%llx> .bss [%llx, %llx) => WRITE\n", root.table, __bss_base, __bss_end);
 	vm_map_range_identity(root, (uint64_t)__bss_base, (uint64_t)__bss_end, VM_MAP_FLAG_WRITE);
 
-	printk("vm: .stack [%llx, %llx) => WRITE\n", __stack_bottom, __stack_top);
+	printk("vm: <0x%llx> .stack [%llx, %llx) => WRITE\n", root.table, __stack_bottom, __stack_top);
 	vm_map_range_identity(root, (uint64_t)__stack_bottom, (uint64_t)__stack_top, VM_MAP_FLAG_WRITE);
 
-	printk("vm: __free_ram [%llx, %llx) => WRITE\n", __free_ram_start, __free_ram_end);
+	printk("vm: <0x%llx> __free_ram [%llx, %llx) => WRITE\n", root.table, __free_ram_start, __free_ram_end);
 	vm_map_range_identity(root, (uint64_t)__free_ram_start, (uint64_t)__free_ram_end, VM_MAP_FLAG_WRITE);
 }
 
-// Requests the devices to install their memory map.
-static inline void __vm_map_devices(struct vm_root_pt root) {
+void vm_map_devices(struct vm_root_pt root) {
 	trap_init_mm(root);
 	uart_init_mm(root);
 }
@@ -54,8 +52,8 @@ void vm_switch(void) {
 	__root.table = table;
 
 	// 2. install stuff inside the root table
-	__vm_map_kernel_memory(__root);
-	__vm_map_devices(__root);
+	vm_map_kernel_memory(__root);
+	vm_map_devices(__root);
 
 	// 3. cross our fingers and geronimoooooooooo
 	__vm_switch(__root);

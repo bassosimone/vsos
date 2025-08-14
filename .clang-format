@@ -4,7 +4,7 @@ TabWidth: 8
 UseTab: ForIndentation
 BreakBeforeBraces: Attach
 AllowShortIfStatementsOnASingleLine: false
-ColumnLimit: 110
+ColumnLimit: 120
 BinPackParameters: false
 BinPackArguments: false
 AlignAfterOpenBracket: Align

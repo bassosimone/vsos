@@ -79,6 +79,18 @@ void vm_map_range_identity(struct vm_root_pt root, page_addr_t start, uintptr_t 
 // specific areas of the memory for kernel usage with different flags.
 void vm_map_explicit(struct vm_root_pt root, page_addr_t paddr, uintptr_t vaddr, vm_map_flags_t flags);
 
+// Maps the kernel memory into the given root table.
+//
+// When you're creating the memory layout for a new process, you need to
+// call this function to allow the process to handle traps.
+//
+// So, the process basically gets a copy of the kernel layout and the
+// kernel layout is immutable after the boot.
+void vm_map_kernel_memory(struct vm_root_pt root);
+
+// Like vm_map_kernel_memory but for mapping devices memory.
+void vm_map_devices(struct vm_root_pt root);
+
 // Convenience wrapper for vm_map_explicit to setup identity mapping for paddr.
 static inline void vm_map_identity(struct vm_root_pt root, page_addr_t paddr, vm_map_flags_t flags) {
 	return vm_map_explicit(root, paddr, paddr, flags);
@@ -88,10 +100,7 @@ static inline void vm_map_identity(struct vm_root_pt root, page_addr_t paddr, vm
 // we have already checked that arguments are correctly aligned.
 //
 // Prefer __vm_map_explicit to calling this function.
-void __vm_map_explicit_assume_aligned(struct vm_root_pt root,
-                                      page_addr_t paddr,
-                                      uintptr_t vaddr,
-                                      vm_map_flags_t flags);
+void __vm_map_explicit_assume_aligned(struct vm_root_pt root, page_addr_t paddr, uintptr_t vaddr, vm_map_flags_t flags);
 
 // Internal machine-dependent function for using the MMU.
 //

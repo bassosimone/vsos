@@ -8,6 +8,11 @@
 
 #include <sys/types.h> // for uintptr_t
 
+// Initialize the data structures required to handling traps.
+//
+// Must be called first by early boot.
+void trap_init_early(void);
+
 // Initialize the memory mapping for trap handling.
 //
 // Called by the mm subsystem.

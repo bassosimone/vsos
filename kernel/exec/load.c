@@ -14,8 +14,7 @@
 
 #include <string.h> // for __bzero_unaligned
 
-static inline int64_t
-mmap_segment(struct vm_root_pt uroot, struct elf64_image *image, struct elf64_segment *segment) {
+static inline int64_t mmap_segment(struct vm_root_pt uroot, struct elf64_image *image, struct elf64_segment *segment) {
 	// Transform flags to VM flags
 	vm_map_flags_t userflags = VM_MAP_FLAG_USER;
 	if ((segment->flags & ELF64_PF_R) != 0) {
@@ -110,7 +109,12 @@ int64_t load_elf64(struct load_program *prog, struct elf64_image *image) {
 	}
 	printk("  user root table 0x%llx\n", prog->root.table);
 
-	// 4. load each segment into RAM
+	// 4. fill the page table with kernel mappings so that system calls or traps
+	// occurring in user space are able to access kernel memory.
+	vm_map_kernel_memory(prog->root);
+	vm_map_devices(prog->root);
+
+	// 5. load each segment into RAM
 	for (size_t idx = 0; idx < image->nsegments; idx++) {
 		struct elf64_segment *segment = &image->segments[idx];
 		if (segment->type != ELF64_PT_LOAD) { // we only care about PT_LOAD

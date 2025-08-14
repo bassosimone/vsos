@@ -78,7 +78,7 @@ void pl011_init_early(struct pl011_device *dev) {
 
 void pl011_init_mm(struct pl011_device *dev, struct vm_root_pt root) {
 	uintptr_t limit = memory_limit(dev->base);
-	printk("vm: PLO11<%s> [%llx, %llx) => DEVICE|WRITE\n", dev->name, dev->base, limit);
+	printk("vm: <0x%llx> PL011<%s> [%llx, %llx) => DEVICE|WRITE\n", root.table, dev->name, dev->base, limit);
 	vm_map_range_identity(root, dev->base, limit, VM_MAP_FLAG_WRITE | VM_MAP_FLAG_DEVICE);
 }
 
@@ -183,8 +183,7 @@ void pl011_isr(struct pl011_device *dev) {
 		mmio_write_uint32(icr_addr(dev->base), UARTINT_TX);
 
 		// Mask the interrupt to avoid level-triggered interrupt storms.
-		mmio_write_uint32(imsc_addr(dev->base),
-		                  (mmio_read_uint32(imsc_addr(dev->base)) & ~UARTINT_TX));
+		mmio_write_uint32(imsc_addr(dev->base), (mmio_read_uint32(imsc_addr(dev->base)) & ~UARTINT_TX));
 
 		// Let user space know it can send more
 		sched_thread_resume_all(SCHED_THREAD_WAIT_UART_WRITABLE);
@@ -284,8 +283,7 @@ ssize_t pl011_send(struct pl011_device *dev, const char *buf, size_t count, uint
 		}
 
 		// Enable the interrupt again
-		mmio_write_uint32(imsc_addr(dev->base),
-		                  (mmio_read_uint32(imsc_addr(dev->base)) | UARTINT_TX));
+		mmio_write_uint32(imsc_addr(dev->base), (mmio_read_uint32(imsc_addr(dev->base)) | UARTINT_TX));
 
 		// Release the spinlock and wait for writability.
 		//

@@ -103,7 +103,7 @@ static uint64_t make_leaf_pte(uintptr_t paddr, vm_map_flags_t flags) {
 }
 
 // Creates an intermediate table descriptor.
-static uint64_t make_table_desc(uintptr_t paddr) {
+static uint64_t make_intermediate_table_desc(uintptr_t paddr) {
 	uint64_t desc = paddr & ARM64_PTE_ADDR_MASK;
 	desc |= ARM64_PTE_VALID | ARM64_PTE_TABLE;
 	return desc;
@@ -152,7 +152,7 @@ void __vm_map_explicit_assume_aligned(struct vm_root_pt root,
 
 	if ((l1_virt[l1_idx] & ARM64_PTE_VALID) == 0) {
 		uintptr_t l2_phys = page_must_alloc(palloc_flags);
-		l1_virt[l1_idx] = make_table_desc(l2_phys);
+		l1_virt[l1_idx] = make_intermediate_table_desc(l2_phys);
 		dsb_ishst(); // ensure visibility
 	}
 	if ((flags & VM_MAP_FLAG_DEBUG) != 0) {
@@ -169,7 +169,7 @@ void __vm_map_explicit_assume_aligned(struct vm_root_pt root,
 
 	if ((l2_virt[l2_idx] & ARM64_PTE_VALID) == 0) {
 		uintptr_t l3_phys = page_must_alloc(palloc_flags);
-		l2_virt[l2_idx] = make_table_desc(l3_phys);
+		l2_virt[l2_idx] = make_intermediate_table_desc(l3_phys);
 		dsb_ishst(); // ensure visibility
 	}
 	if ((flags & VM_MAP_FLAG_DEBUG) != 0) {
@@ -207,8 +207,8 @@ void __vm_switch(struct vm_root_pt root) {
 	const uint64_t TG0_4K = 0ULL << 14;
 	const uint64_t TG1_4K = 2ULL << 30;
 	const uint64_t IPS_40BIT = 2ull << 32;
-	uint64_t tcr = 0 | (T0SZ) | (IRGN_WBWA << 8) | (ORGN_WBWA << 10) | (SH_INNER << 12) | TG0_4K |
-	               (T1SZ << 16) | (IRGN_WBWA << 24) | (ORGN_WBWA << 26) | (SH_INNER << 28) | TG1_4K;
+	uint64_t tcr = 0 | (T0SZ) | (IRGN_WBWA << 8) | (ORGN_WBWA << 10) | (SH_INNER << 12) | TG0_4K | (T1SZ << 16) |
+	               (IRGN_WBWA << 24) | (ORGN_WBWA << 26) | (SH_INNER << 28) | TG1_4K;
 	tcr |= IPS_40BIT;
 	printk("vm: msr_tcr_el1 %llx\n", tcr);
 	msr_tcr_el1(tcr);
