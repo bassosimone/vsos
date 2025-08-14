@@ -222,35 +222,33 @@ static inline struct sched_process *must_get_process(struct sched_thread *thread
 	return thread->__proc;
 }
 
-static void __sched_thread_process_main(void *opaque) {
-	// 1. for sanity make sure we're running as a thread
+int64_t sched_process_start(struct load_program *program) {
+	// 1. some sanity checks to make sure it's all good
 	KERNEL_ASSERT(current != 0);
+	KERNEL_ASSERT(program != 0);
 
-	// 2. initialize the process associated with this thread
+	// 2. disable the interrupts until we invoke ERET: this
+	// is just a small time window, yet we do not want to be
+	// interrupted until we've switched context.
+	local_irq_disable();
+
+	// 3. initialize the process associated with this thread
 	// and ensure it's possible to round trip this.
 	current->__proc = &current->__proc_storage;
 	struct sched_process *proc = must_get_process(current);
 	KERNEL_ASSERT(proc == current->__proc);
 
-	// 3. retrieve the user program we should execute.
-	struct load_program *program = (struct load_program *)opaque;
-	KERNEL_ASSERT(program != 0);
+	// 4. permanently attach this thread to a user process
+	current->flags |= SCHED_THREAD_FLAG_PROCESS;
 
-	// 4. call assembly code to initialize the trapframe
+	// 5. call assembly code to initialize the trapframe
 	// relative to the current thread stack. The idea here
 	// is to simulate having taking a sync trap.
 	current->trapframe = trap_create_process_frame(program->entry, program->root.table, program->stack_top);
 
-	// 5. return to userspace. This is another geronimooooo case!
+	// 6. return to userspace. This is another geronimooooo case!
 	trap_restore_user_and_eret(current->trapframe);
-
-	// 6. we expect to never return here
-	panic("trap_restore_user_and_eret should never return");
-}
-
-int64_t sched_process_start(struct load_program *program) {
-	uint64_t flags = SCHED_THREAD_FLAG_JOINABLE | SCHED_THREAD_FLAG_PROCESS;
-	return sched_thread_start(__sched_thread_process_main, (void *)program, flags);
+	panic("trap_restore_user_and_eret should never return\n");
 }
 
 // Loop forever yielding the CPU and then awaiting for interrupts.

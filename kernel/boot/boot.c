@@ -21,50 +21,6 @@
 
 #include <string.h> // for memset
 
-static void thread_hello(void *opaque) {
-	(void)opaque;
-	printk("Hello, world\n");
-	sched_thread_yield();
-	printk("Hello, world\n");
-	sched_thread_yield();
-	printk("Hello, world\n");
-	sched_thread_yield();
-}
-
-static void thread_goodbye(void *opaque) {
-	(void)opaque;
-	printk("Goodbye, world\n");
-	sched_thread_yield();
-	printk("Goodbye, world\n");
-	sched_thread_yield();
-	printk("Goodbye, world\n");
-	sched_thread_yield();
-}
-
-static void _sleeper(void *opaque) {
-	(void)opaque;
-	for (size_t idx = 0; idx < 4; idx++) {
-		sched_thread_millisleep(750);
-		printk("Hello!\n");
-	}
-}
-
-// Very minimal mechanism to ensure we echo the input.
-[[noreturn]] static void _echo_thread(void *opaque) {
-	(void)opaque;
-	for (;;) {
-		char ch = 0;
-		ssize_t n = uart_recv(&ch, 1, /* flags */ 0);
-		if (n != 1) {
-			continue;
-		}
-		if (ch == '\r') {
-			ch = '\n';
-		}
-		(void)uart_send(&ch, 1, /* flags */ 0);
-	}
-}
-
 static void __kernel_zygote(void *opaque) {
 	(void)opaque;
 
@@ -75,43 +31,27 @@ static void __kernel_zygote(void *opaque) {
 	// Needs to happen after we have threads.
 	trap_init_irqs();
 
-	// 2. create a thread for saying hello to the world
-	int64_t tid = sched_thread_start(thread_hello, /* opaque */ 0, /* flags */ 0);
-	printk("started hello thread: %d\n", tid);
-
-	// 3. create a thread for saying goodbye to the world
-	tid = sched_thread_start(thread_goodbye, /* opaque */ 0, /* flags */ 0);
-	printk("started goodbye thread: %d\n", tid);
-
-	// 4. create a thread that prints a message every second
-	tid = sched_thread_start(_sleeper, /* opaque */ 0, /* flags */ 0);
-	printk("started sleeper thread: %d\n", tid);
-
-	// 5. create a thread that echoes what we write.
-	tid = sched_thread_start(_echo_thread, /* opaque */ 0, /* flags */ 0);
-	printk("started echo thread: %d\n", tid);
-
-	// 6. load the initial ramdisk
+	// 2. load the initial ramdisk
 	struct initrd_info rd_info = {.base = 0, .count = 0};
 	int rc = initrd_load(&rd_info);
 	KERNEL_ASSERT(rc == 0);
 	KERNEL_ASSERT(rd_info.base > 0 && rd_info.count > 0);
 
-	// 7. interpret the ramdisk as an ELF binary
+	// 3. interpret the ramdisk as an ELF binary
 	struct elf64_image image = {
 	    0,
 	};
 	rc = elf64_parse(&image, (const void *)rd_info.base, rd_info.count);
 	KERNEL_ASSERT(rc == 0);
 
-	// 8. load the ELF binary into memory
+	// 4. load the ELF binary into memory
 	struct load_program program = {
 	    0,
 	};
 	rc = load_elf64(&program, &image);
 	KERNEL_ASSERT(rc == 0);
 
-	// 9. the super geronimo thing: return to userspace
+	// 5. the super geronimo thing: return to userspace
 	rc = sched_process_start(&program);
 	KERNEL_ASSERT(rc >= 0);
 }
