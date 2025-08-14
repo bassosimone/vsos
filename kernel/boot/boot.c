@@ -7,7 +7,8 @@
 #include <kernel/core/assert.h> // for KERNEL_ASSERT
 #include <kernel/core/panic.h>  // for panic
 #include <kernel/core/printk.h> // for printk
-#include <kernel/exec/elf64.h>  // for elf64_load
+#include <kernel/exec/elf64.h>  // for elf64_parse
+#include <kernel/exec/load.h>   // for load_elf64
 #include <kernel/init/initrd.h> // for initrd_read_early
 #include <kernel/mm/page.h>     // for page_alloc
 #include <kernel/mm/vm.h>       // for vm_switch
@@ -96,11 +97,18 @@ static void __kernel_zygote(void *opaque) {
 	KERNEL_ASSERT(rc == 0);
 	KERNEL_ASSERT(rd_info.base > 0 && rd_info.count > 0);
 
-	// 7. interpret the ramdisk as an ELF binary and load it into memory
+	// 7. interpret the ramdisk as an ELF binary
 	struct elf64_image image = {
 	    0,
 	};
-	rc = elf64_load(&image, (const void *)rd_info.base, rd_info.count);
+	rc = elf64_parse(&image, (const void *)rd_info.base, rd_info.count);
+	KERNEL_ASSERT(rc == 0);
+
+	// 8. load the ELF binary into memory
+	struct load_program program = {
+	    0,
+	};
+	rc = load_elf64(&program, &image);
 	KERNEL_ASSERT(rc == 0);
 }
 

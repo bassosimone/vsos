@@ -4,14 +4,19 @@
 #ifndef KERNEL_EXEC_ELF64_H
 #define KERNEL_EXEC_ELF64_H
 
-#include <kernel/mm/vm.h> // for struct vm_root_pt
-
 #include <sys/types.h> // for size_t
 
 // Segment permission flags
 #define ELF64_PF_X 1
 #define ELF64_PF_W 2
 #define ELF64_PF_R 4
+
+// Segment type
+#define ELF64_PT_NULL 0
+#define ELF64_PT_LOAD 1
+#define ELF64_PT_DYNAMIC 2
+#define ELF64_PT_INTERP 3
+#define ELF64_PT_NOTE 4
 
 // Segment within an ELF64 binary.
 struct elf64_segment {
@@ -29,6 +34,9 @@ struct elf64_segment {
 
 	// ELF permission flags
 	uint32_t flags;
+
+	// Segment type.
+	uint32_t type;
 };
 
 // Maximum number of segments we can load with this library.
@@ -55,6 +63,6 @@ struct elf64_image {
 // Fills image with a simplified view of the ELF64 binary at [data, data+size).
 //
 // Returns 0 on success and a negative errno value on failure.
-int64_t elf64_load(struct elf64_image *image, const void *data, size_t size);
+int64_t elf64_parse(struct elf64_image *image, const void *data, size_t size);
 
 #endif // KERNEL_EXEC_ELF64_H

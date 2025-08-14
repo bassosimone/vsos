@@ -5,6 +5,7 @@
 #include <kernel/core/assert.h> // for KERNEL_ASSERT
 #include <kernel/core/printk.h> // for printk
 #include <kernel/exec/elf64.h>  // import API
+#include <kernel/exec/layout.h> // layout_valid_virtual_address
 #include <kernel/mm/page.h>     // for page_aligned
 #include <kernel/mm/vm.h>       // for vm_map
 
@@ -48,38 +49,6 @@ struct elf64_phdr {
 	uint64_t p_align;  // Alignment requirement
 };
 
-#define PT_NULL 0
-#define PT_LOAD 1
-#define PT_DYNAMIC 2
-#define PT_INTERP 3
-#define PT_NOTE 4
-
-// The user program base as defined in the linker script.
-#define USER_PROGRAM_BASE 0x1000000
-
-// The arbitrary maximum size of the user program.
-#define MAX_USER_PROGRAM_SIZE 0x1000000
-
-// The limit starting at which we cannot have user stuff.
-#define USER_PROGRAM_LIMIT (USER_PROGRAM_BASE + MAX_USER_PROGRAM_SIZE)
-
-// We do not enforce a maximum file size in the linker script but we
-// check here that the user program is within bounds.
-static inline bool valid_virtual_address(uintptr_t candidate) {
-	return candidate >= USER_PROGRAM_BASE && candidate < USER_PROGRAM_LIMIT;
-}
-
-// Ensures that a virtual address plus its offset is still valid virtual memory.
-static inline bool valid_virtual_address_offset(uintptr_t base, uintptr_t off) {
-	if (!valid_virtual_address(base)) {
-		return false;
-	}
-	if (base > UINTPTR_MAX - off) {
-		return false;
-	}
-	return valid_virtual_address(base + off);
-}
-
 #define EI_CLASS 4
 #define EI_DATA 5
 #define ET_EXEC 2
@@ -89,7 +58,7 @@ static inline bool valid_virtual_address_offset(uintptr_t base, uintptr_t off) {
 
 static int64_t __fill(struct elf64_image *image, const void *data, size_t size) {
 	// 1. convert to pointer and ensure we have enough space to touch it.
-	printk("elf64: attempting to load file into memory\n");
+	printk("elf64: parsing ELF4 at base=0x%llx size=%lld into 0x%llx\n", data, size, image);
 	struct elf64_ehdr *ehdr = (struct elf64_ehdr *)data;
 	if (size < sizeof(struct elf64_ehdr)) {
 		return -ENOEXEC;
@@ -127,7 +96,7 @@ static int64_t __fill(struct elf64_image *image, const void *data, size_t size) 
 	printk("  e_version: %u\n", (unsigned int)ehdr->e_version);
 
 	// 6. we will check this field later once we know the sections
-	if (!valid_virtual_address(ehdr->e_entry)) {
+	if (!layout_valid_virtual_address(ehdr->e_entry)) {
 		return -ENOEXEC;
 	}
 	image->entry = ehdr->e_entry;
@@ -201,10 +170,11 @@ static int64_t __fill(struct elf64_image *image, const void *data, size_t size) 
 		}
 
 		// 15.2. skip the entry if it's not PT_LOAD.
-		if (entry->p_type != PT_LOAD) {
+		if (entry->p_type != ELF64_PT_LOAD) {
 			continue;
 		}
 		struct elf64_segment *segment = &image->segments[image->nsegments];
+		segment->type = entry->p_type;
 		printk("    #%d:\n", image->nsegments);
 		printk("      p_type: PT_LOAD\n");
 
@@ -216,17 +186,21 @@ static int64_t __fill(struct elf64_image *image, const void *data, size_t size) 
 		printk("      p_flags: 0x%x\n", (unsigned int)entry->p_flags);
 
 		// 15.4. copy the section virtual address
-		if (!valid_virtual_address(entry->p_vaddr)) {
+		if (!layout_valid_virtual_address(entry->p_vaddr)) {
 			return -ENOEXEC;
 		}
 		segment->virt_addr = entry->p_vaddr;
 		if (entry->p_vaddr != entry->p_paddr) {
 			return -ENOEXEC;
 		}
+		if (!page_aligned(entry->p_vaddr)) {
+			return -ENOEXEC;
+		}
 		printk("      p_vaddr: 0x%llx\n", entry->p_vaddr);
 
 		// 15.5. copy the size of the virtual address space
-		if (!valid_virtual_address_offset(segment->virt_addr, entry->p_memsz)) {
+		if (!layout_valid_virtual_address_offset(segment->virt_addr, entry->p_memsz)) {
+			printk("ELLIOT IS HERE\n");
 			return -ENOEXEC;
 		}
 		segment->mem_size = entry->p_memsz;
@@ -268,7 +242,7 @@ static int64_t __fill(struct elf64_image *image, const void *data, size_t size) 
 	return (is_entry_good) ? 0 : -ENOEXEC;
 }
 
-int64_t elf64_load(struct elf64_image *image, const void *data, size_t size) {
+int64_t elf64_parse(struct elf64_image *image, const void *data, size_t size) {
 	// 1. basic sanity checks
 	if (image == 0 || data == 0 || size <= 0) {
 		return -EINVAL;
