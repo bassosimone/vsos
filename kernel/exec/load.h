@@ -16,6 +16,12 @@ struct load_program {
 
 	// The user-page table root.
 	struct vm_root_pt root;
+
+	// The bottom of the user stack.
+	uintptr_t stack_bottom;
+
+	// The top of the user stack.
+	uintptr_t stack_top;
 };
 
 // Loads a parsed ELF64 image into RAM.

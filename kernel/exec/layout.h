@@ -10,10 +10,16 @@
 #define LAYOUT_USER_PROGRAM_BASE 0x1000000
 
 // The arbitrary maximum size of the user program.
-#define LAYOUT_MAX_USER_PROGRAM_SIZE 0x1000000
+#define LAYOUT_MAX_USER_PROGRAM_SIZE 0x800000
 
 // The limit starting at which we cannot have user stuff.
 #define LAYOUT_USER_PROGRAM_LIMIT (LAYOUT_USER_PROGRAM_BASE + LAYOUT_MAX_USER_PROGRAM_SIZE)
+
+// The bottom of the user program stack.
+#define LAYOUT_USER_STACK_BOTTOM 0x2000000
+
+// The top of the user program stack.
+#define LAYOUT_USER_STACK_TOP 0x2040000
 
 // We do not enforce a maximum file size in the linker script but we
 // check here that the user program is within bounds.

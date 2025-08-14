@@ -92,6 +92,39 @@ static inline int64_t mmap_segment(struct vm_root_pt uroot, struct elf64_image *
 	return 0;
 }
 
+static int64_t allocate_stack(struct load_program *prog) {
+	// Make sure our assumptions hold
+	KERNEL_ASSERT(page_aligned(LAYOUT_USER_STACK_BOTTOM));
+	KERNEL_ASSERT(page_aligned(LAYOUT_USER_STACK_TOP));
+	KERNEL_ASSERT((LAYOUT_USER_STACK_TOP - LAYOUT_USER_STACK_BOTTOM) % PAGE_SIZE == 0);
+
+	// Set the bottom and top to the virtual layout values
+	prog->stack_bottom = LAYOUT_USER_STACK_BOTTOM;
+	prog->stack_top = LAYOUT_USER_STACK_TOP;
+	printk("  creating the user process stack [0x%llx, 0x%llx)\n", prog->stack_bottom, prog->stack_top);
+
+	// Compute the number of pages to allocate
+	size_t num_pages = (LAYOUT_USER_STACK_TOP - LAYOUT_USER_STACK_BOTTOM) / PAGE_SIZE;
+	uintptr_t base = LAYOUT_USER_STACK_BOTTOM;
+	for (size_t idx = 0; idx < num_pages; idx++) {
+		// Allocate a single physical page using the allocator
+		page_addr_t ppaddr = 0;
+		int64_t rc = page_alloc(&ppaddr, PAGE_ALLOC_WAIT | PAGE_ALLOC_YIELD);
+		if (rc != 0) {
+			return rc;
+		}
+		KERNEL_ASSERT(ppaddr != 0);
+		printk("    physical page address 0x%llx\n", ppaddr);
+
+		// Add the page to the user page table
+		printk("    user-mapping page to 0x%llx\n", base);
+		vm_map_explicit(prog->root, ppaddr, base, VM_MAP_FLAG_USER | VM_MAP_FLAG_WRITE | VM_MAP_FLAG_DEBUG);
+		KERNEL_ASSERT(base <= UINTPTR_MAX - PAGE_SIZE);
+		base += PAGE_SIZE;
+	}
+	return 0;
+}
+
 int64_t load_elf64(struct load_program *prog, struct elf64_image *image) {
 	// 1. ensure we're not passed null pointers
 	KERNEL_ASSERT(prog != 0);
@@ -126,5 +159,7 @@ int64_t load_elf64(struct load_program *prog, struct elf64_image *image) {
 			return rc;
 		}
 	}
-	return 0;
+
+	// Finally allocate the user stack
+	return allocate_stack(prog);
 }
