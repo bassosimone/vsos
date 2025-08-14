@@ -12,8 +12,6 @@
 #include <sys/param.h> // for PAGE_SIZE
 #include <sys/types.h> // for uintptr_t
 
-#include <string.h> // for __bzero
-
 // Install the memory map for the kernel memory.
 static inline void __vm_map_kernel_memory(struct vm_root_pt root) {
 	printk("vm: .text [%llx, %llx) => EXEC\n", __kernel_base, __kernel_end);
@@ -52,7 +50,6 @@ void vm_switch(void) {
 	// 1. create the root table
 	printk("vm: switching to virtual addresses... brace yourself\n");
 	uintptr_t table = page_must_alloc(PAGE_ALLOC_WAIT);
-	__bzero((void *)table, PAGE_SIZE);
 	printk("vm: root_table %llx\n", table);
 	__root.table = table;
 

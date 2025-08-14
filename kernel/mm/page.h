@@ -46,8 +46,8 @@ void page_init_early(void);
 // The returned memory page is *physical*. However, the kernel maps the
 // whole RAM, therefore, for the kernel it is also virtual.
 //
-// The returned memory page *content* is arbitrary. In most if not all
-// cases, the right thing(TM) to do is to map and clear it.
+// The returned memory page *content* is zeroed. This is possible
+// because the kernel identity maps the RAM.
 //
 // Returns 0 on success and `-ENOMEM` or `-EAGAIN` on failure.
 //

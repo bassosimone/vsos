@@ -204,6 +204,7 @@ int64_t page_alloc(page_addr_t *addr, uint64_t flags) {
 		if ((flags & PAGE_ALLOC_DEBUG) != 0) {
 			printk("page_alloc: %llx => %llx\n", index, *addr);
 		}
+		__bzero((void *)*addr, PAGE_SIZE);
 		return 0;
 	}
 }

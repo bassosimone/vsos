@@ -10,8 +10,6 @@
 #include <kernel/mm/page.h>     // for page_alloc
 #include <kernel/mm/vm.h>       // for __vm_map_kernel_memory
 
-#include <string.h> // for __bzero
-
 // Physical address mask: page-aligned 4 KiB (bits [11:0] must be 0)
 #define ARM64_PTE_ADDR_MASK 0x0000FFFFFFFFF000ULL
 
@@ -148,7 +146,6 @@ void __vm_map_explicit_assume_aligned(struct vm_root_pt root,
 
 	if ((l1_virt[l1_idx] & ARM64_PTE_VALID) == 0) {
 		uintptr_t l2_phys = page_must_alloc(PAGE_ALLOC_WAIT);
-		__bzero((void *)l2_phys, PAGE_SIZE);
 		l1_virt[l1_idx] = make_table_desc(l2_phys);
 		dsb_ishst(); // ensure visibility
 	}
@@ -166,7 +163,6 @@ void __vm_map_explicit_assume_aligned(struct vm_root_pt root,
 
 	if ((l2_virt[l2_idx] & ARM64_PTE_VALID) == 0) {
 		uintptr_t l3_phys = page_must_alloc(PAGE_ALLOC_WAIT);
-		__bzero((void *)l3_phys, PAGE_SIZE);
 		l2_virt[l2_idx] = make_table_desc(l3_phys);
 		dsb_ishst(); // ensure visibility
 	}
