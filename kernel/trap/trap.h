@@ -34,4 +34,11 @@ void trap_init_irqs(void);
 // The frame variable points to the MD trap frame context.
 [[noreturn]] void trap_restore_user_and_eret(uintptr_t frame);
 
+// Creates a trap_frame on the stack that fakes out the invocation of
+// a system call so that ERET will bring us back to userspace.
+//
+// Returns the pointer to the beginning of the frame inside the stack
+// so that it's then possible to call trap_restore_user_and_eret.
+uintptr_t trap_create_process_frame(uintptr_t entry, uintptr_t pg_table, uintptr_t stack_top);
+
 #endif // KERNEL_TRAP_TRAP_H

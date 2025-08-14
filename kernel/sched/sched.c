@@ -8,6 +8,8 @@
 #include <kernel/core/panic.h>    // for panic
 #include <kernel/core/printk.h>   // for printk
 #include <kernel/core/spinlock.h> // for struct spinlock
+#include <kernel/exec/load.h>     // for struct load_program
+#include <kernel/mm/vm.h>         // for struct vm_root_pt
 #include <kernel/sched/sched.h>   // the subsystem's API
 #include <kernel/sched/switch.h>  // switching threads
 #include <kernel/trap/trap.h>     // for trap_restore_user_and_eret
@@ -31,9 +33,20 @@
 // The size in bytes of the statically-allocated stack.
 #define SCHED_THREAD_STACK_SIZE 8192
 
+// A process contains resources including threads.
+//
+// Currently empty since there are no resources shared by
+// threads within the same userspace process.
+//
+// We will need to add here the file descriptors.
+struct sched_process {};
+
 // A schedulable thread of execution.
 struct sched_thread {
 	// The thread stack pointer.
+	//
+	// CAUTION: This field MUST be the first element of a
+	// thread since the switch code assumes this.
 	uintptr_t sp;
 
 	// The statically-allocated aligned stack.
@@ -65,7 +78,24 @@ struct sched_thread {
 
 	// The epoch when the thread was created.
 	uint64_t epoch;
+
+	// Back pointer to the owning process.
+	//
+	// NULL if we are a kernel thread.
+	//
+	// We use a `__` name to hint that one should use
+	// accessors to safely access this field.
+	struct sched_process *__proc;
+
+	// Storage for allocating a proper process.
+	//
+	// This strategy is fine as long as we have a single
+	// thread for each user process.
+	struct sched_process __proc_storage;
 };
+
+// Ensure that the important invariant assumed by switching code is still valid.
+static_assert(__builtin_offsetof(struct sched_thread, sp) == 0, "sp offset");
 
 // Statically allocated list of threads.
 static struct sched_thread threads[SCHED_MAX_THREADS];
@@ -148,7 +178,7 @@ static int64_t __sched_thread_start_locked(sched_thread_main_t *main, void *opaq
 		return -EAGAIN;
 	}
 
-	// 3. just in case zero the thread including its stack
+	// 3. for safety zero initialize the whole slot
 	memset(candidate, 0, sizeof(*candidate));
 
 	// 4. initialize the thread stack invoking MD code
@@ -184,6 +214,43 @@ int64_t sched_thread_start(sched_thread_main_t *main, void *opaque, uint64_t fla
 	int64_t rv = __sched_thread_start_locked(main, opaque, flags);
 	spinlock_release(&lock);
 	return rv;
+}
+
+// Panic if we cannot get the process associated with the current thread.
+static inline struct sched_process *must_get_process(struct sched_thread *thread) {
+	KERNEL_ASSERT(thread->__proc != 0);
+	return thread->__proc;
+}
+
+static void __sched_thread_process_main(void *opaque) {
+	// 1. for sanity make sure we're running as a thread
+	KERNEL_ASSERT(current != 0);
+
+	// 2. initialize the process associated with this thread
+	// and ensure it's possible to round trip this.
+	current->__proc = &current->__proc_storage;
+	struct sched_process *proc = must_get_process(current);
+	KERNEL_ASSERT(proc == current->__proc);
+
+	// 3. retrieve the user program we should execute.
+	struct load_program *program = (struct load_program *)opaque;
+	KERNEL_ASSERT(program != 0);
+
+	// 4. call assembly code to initialize the trapframe
+	// relative to the current thread stack. The idea here
+	// is to simulate having taking a sync trap.
+	current->trapframe = trap_create_process_frame(program->entry, program->root.table, program->stack_top);
+
+	// 5. return to userspace. This is another geronimooooo case!
+	trap_restore_user_and_eret(current->trapframe);
+
+	// 6. we expect to never return here
+	panic("trap_restore_user_and_eret should never return");
+}
+
+int64_t sched_process_start(struct load_program *program) {
+	uint64_t flags = SCHED_THREAD_FLAG_JOINABLE | SCHED_THREAD_FLAG_PROCESS;
+	return sched_thread_start(__sched_thread_process_main, (void *)program, flags);
 }
 
 // Loop forever yielding the CPU and then awaiting for interrupts.

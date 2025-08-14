@@ -4,6 +4,8 @@
 #ifndef KERNEL_SCHED_SCHED_H
 #define KERNEL_SCHED_SCHED_H
 
+#include <kernel/exec/load.h> // for struct load_program
+
 #include <sys/param.h> // for HZ
 #include <sys/types.h> // for uint64_t
 
@@ -25,6 +27,9 @@ void sched_clock_init_irqs(void);
 // The thread can be joined and must not be automatically reaped.
 #define SCHED_THREAD_FLAG_JOINABLE (1 << 0)
 
+// The thread is attached to a user process instance.
+#define SCHED_THREAD_FLAG_PROCESS (1 << 1)
+
 // The type of the main function implementing a kernel thread.
 typedef void(sched_thread_main_t)(void *opaque);
 
@@ -39,6 +44,26 @@ typedef void(sched_thread_main_t)(void *opaque);
 //
 // Returns a negative errno value or the thread ID (>= 0).
 int64_t sched_thread_start(sched_thread_main_t *main, void *opaque, uint64_t flags);
+
+// Starts a kernel thread running a user process.
+//
+// The return value is a valid thread ID (>= 0) or a negative errno.
+//
+// The kernel thread will setup the process resources and prepare a synthetic
+// trapframe to return to userspace using `ERET`.
+//
+// From then on, the kernel thread will be the permanent parent of the process.
+//
+// The kernel thread will be marked as joinable, because user processes must
+// be awaited by other user processes and provide a status.
+//
+// Note that, when we reach this point of the `execve` syscall, we have basically
+// already have parsed the ELF, so we known we can execute something, and what
+// would prevent the process from starting is lack of system resources.
+//
+// The kernel thread is also marked as a user process, so that tools like `ps`
+// report that this is a user process with the given ID.
+int64_t sched_process_start(struct load_program *program);
 
 // Yields the CPU to another runnable thread.
 //

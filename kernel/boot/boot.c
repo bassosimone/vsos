@@ -110,6 +110,10 @@ static void __kernel_zygote(void *opaque) {
 	};
 	rc = load_elf64(&program, &image);
 	KERNEL_ASSERT(rc == 0);
+
+	// 9. the super geronimo thing: return to userspace
+	rc = sched_process_start(&program);
+	KERNEL_ASSERT(rc >= 0);
 }
 
 [[noreturn]] void __kernel_main(void) {

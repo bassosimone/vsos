@@ -306,3 +306,81 @@ trap_restore_user_and_eret:
 
     // Return from exception
     eret
+
+    // uintptr_t trap_create_process_frame(uintptr_t entry, uintptr_t root_pt, uintpt_t ustack);
+    //
+    // Creates a process frame allowing return to userspace with ERET.
+    .section .text
+    .global trap_create_process_frame
+    .align 4
+    .type trap_create_process_frame, %function
+trap_create_process_frame:
+    // Arguments: x0 = entry point, x1 = page table, x2 = user stack
+
+    // Bump the stack frame to make space for all the variables to save.
+    sub sp, sp, #816
+
+    // Move zero to x9 so we can use it for setting things to zero.
+    //
+    // This seems a register we as the callee can clobber.
+    mov x9, #0
+
+    // Save general purpose registers and user stack pointer.
+    stp x9, x9, [sp, #0]    // x0, x1
+    stp x9, x9, [sp, #16]   // x2, x3
+    stp x9, x9, [sp, #32]   // x4, x5
+    stp x9, x9, [sp, #48]   // x6, x7
+    stp x9, x9, [sp, #64]   // x8, x9
+    stp x9, x9, [sp, #80]   // x10, x11
+    stp x9, x9, [sp, #96]   // x12, x13
+    stp x9, x9, [sp, #112]  // x14, x15
+    stp x9, x9, [sp, #128]  // x16, x17
+    stp x9, x9, [sp, #144]  // x18, x19
+    stp x9, x9, [sp, #160]  // x20, x21
+    stp x9, x9, [sp, #176]  // x22, x23
+    stp x9, x9, [sp, #192]  // x24, x25
+    stp x9, x9, [sp, #208]  // x26, x27
+    stp x9, x9, [sp, #224]  // x28, x29
+    stp x9, x2, [sp, #240]  // x30, <user_stack>
+
+    // Move zero to q0 so we can use it for settings things to zero
+    //
+    // This seems a register we as the callee can clobber.
+    movi v0.2d, #0
+
+    // Save all SIMD/FP registers (q0-q31)
+    stp q0, q0, [sp, #256] // q0, q1
+    stp q0, q0, [sp, #288] // q2, q3
+    stp q0, q0, [sp, #320] // q4, q5
+    stp q0, q0, [sp, #352] // q6, q7
+    stp q0, q0, [sp, #384] // q8, q9
+    stp q0, q0, [sp, #416] // q10, q11
+    stp q0, q0, [sp, #448] // q12, q13
+    stp q0, q0, [sp, #480] // q14, q15
+    stp q0, q0, [sp, #512] // q16, q17
+    stp q0, q0, [sp, #544] // q18, q19
+    stp q0, q0, [sp, #576] // q20, q21
+    stp q0, q0, [sp, #608] // q22, q23
+    stp q0, q0, [sp, #640] // q24, q25
+    stp q0, q0, [sp, #672] // q26, q27
+    stp q0, q0, [sp, #704] // q28, q29
+    stp q0, q0, [sp, #736] // q30, q31
+
+    // Save control registers
+    str x0, [sp, #768]   // elr_el1 = <entry>
+    mov x10, #0x0        // EL0t mode, interrupts enabled
+    str x10, [sp, #776]  // spsr_el1 = userspace state
+
+    // Save floating point control/status registers
+    mov x10, #0x0        // sensible FP default
+    str x10, [sp, #784]  // fpcr = 0
+    str x10, [sp, #792]  // fpsr = 0
+
+    // Save the TTBR0_EL1 and the padding
+    str x1, [sp, #800]   // ttbr0_el1
+    str x9, [sp, #808]   // padding
+
+    // Return the current stack pointer so to emulate
+    // when happens when we take a synch trap.
+    mov x0, sp
+    ret
