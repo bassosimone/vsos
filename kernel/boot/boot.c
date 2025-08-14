@@ -97,10 +97,11 @@ static void __kernel_zygote(void *opaque) {
 	KERNEL_ASSERT(rd_info.base > 0 && rd_info.count > 0);
 
 	// 7. interpret the ramdisk as an ELF binary and load it into memory
-	uintptr_t user_entry = 0;
-	rc = elf64_load(&user_entry, (const void *)rd_info.base, rd_info.count);
+	struct elf64_image image = {
+	    0,
+	};
+	rc = elf64_load(&image, (const void *)rd_info.base, rd_info.count);
 	KERNEL_ASSERT(rc == 0);
-	KERNEL_ASSERT(user_entry != 0);
 }
 
 [[noreturn]] void __kernel_main(void) {
