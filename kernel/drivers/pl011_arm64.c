@@ -79,7 +79,7 @@ void pl011_init_early(struct pl011_device *dev) {
 void pl011_init_mm(struct pl011_device *dev, struct vm_root_pt root) {
 	uintptr_t limit = memory_limit(dev->base);
 	printk("vm: PLO11<%s> [%llx, %llx) => DEVICE|WRITE\n", dev->name, dev->base, limit);
-	vm_map(root, dev->base, limit, VM_MAP_FLAG_WRITE | VM_MAP_FLAG_DEVICE);
+	vm_map_range_identity(root, dev->base, limit, VM_MAP_FLAG_WRITE | VM_MAP_FLAG_DEVICE);
 }
 
 // UARTCLR_H bit to enable the FIFO.

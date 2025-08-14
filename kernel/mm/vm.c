@@ -15,22 +15,22 @@
 // Install the memory map for the kernel memory.
 static inline void __vm_map_kernel_memory(struct vm_root_pt root) {
 	printk("vm: .text [%llx, %llx) => EXEC\n", __kernel_base, __kernel_end);
-	vm_map(root, (uint64_t)__kernel_base, (uint64_t)__kernel_end, VM_MAP_FLAG_EXEC);
+	vm_map_range_identity(root, (uint64_t)__kernel_base, (uint64_t)__kernel_end, VM_MAP_FLAG_EXEC);
 
 	printk("vm: .rodata [%llx, %llx) => 0\n", __rodata_base, __rodata_end);
-	vm_map(root, (uint64_t)__rodata_base, (uint64_t)__rodata_end, 0);
+	vm_map_range_identity(root, (uint64_t)__rodata_base, (uint64_t)__rodata_end, 0);
 
 	printk("vm: .data [%llx, %llx) => WRITE\n", __data_base, __data_end);
-	vm_map(root, (uint64_t)__data_base, (uint64_t)__data_end, VM_MAP_FLAG_WRITE);
+	vm_map_range_identity(root, (uint64_t)__data_base, (uint64_t)__data_end, VM_MAP_FLAG_WRITE);
 
 	printk("vm: .bss [%llx, %llx) => WRITE\n", __bss_base, __bss_end);
-	vm_map(root, (uint64_t)__bss_base, (uint64_t)__bss_end, VM_MAP_FLAG_WRITE);
+	vm_map_range_identity(root, (uint64_t)__bss_base, (uint64_t)__bss_end, VM_MAP_FLAG_WRITE);
 
 	printk("vm: .stack [%llx, %llx) => WRITE\n", __stack_bottom, __stack_top);
-	vm_map(root, (uint64_t)__stack_bottom, (uint64_t)__stack_top, VM_MAP_FLAG_WRITE);
+	vm_map_range_identity(root, (uint64_t)__stack_bottom, (uint64_t)__stack_top, VM_MAP_FLAG_WRITE);
 
 	printk("vm: __free_ram [%llx, %llx) => WRITE\n", __free_ram_start, __free_ram_end);
-	vm_map(root, (uint64_t)__free_ram_start, (uint64_t)__free_ram_end, VM_MAP_FLAG_WRITE);
+	vm_map_range_identity(root, (uint64_t)__free_ram_start, (uint64_t)__free_ram_end, VM_MAP_FLAG_WRITE);
 }
 
 // Requests the devices to install their memory map.
@@ -62,26 +62,33 @@ void vm_switch(void) {
 	printk("vm: we're now running in virtual address space\n");
 }
 
-void __vm_map_explicit(struct vm_root_pt root, page_addr_t paddr, uintptr_t vaddr, vm_map_flags_t flags) {
+void vm_map_explicit(struct vm_root_pt root, page_addr_t paddr, uintptr_t vaddr, vm_map_flags_t flags) {
 	// 1. make sure all the addresses are aligned with the page size
 	KERNEL_ASSERT(__builtin_is_aligned(root.table, PAGE_SIZE));
 	KERNEL_ASSERT(__builtin_is_aligned(paddr, PAGE_SIZE));
 	KERNEL_ASSERT(__builtin_is_aligned(vaddr, PAGE_SIZE));
 
+	// 2. if needed print what we're doing
+	if ((flags & VM_MAP_FLAG_DEBUG) != 0) {
+		printk("    vm_map: [%llx, %llx) <-> [%llx, %llx) => %lld\n",
+		       paddr,
+		       paddr + PAGE_SIZE,
+		       vaddr,
+		       vaddr + PAGE_SIZE,
+		       flags);
+	}
+
 	// 2. let the MD implementation finish the job
 	__vm_map_explicit_assume_aligned(root, paddr, vaddr, flags);
 }
 
-void vm_map(struct vm_root_pt root, page_addr_t start, uintptr_t end, vm_map_flags_t flags) {
+void vm_map_range_identity(struct vm_root_pt root, page_addr_t start, uintptr_t end, vm_map_flags_t flags) {
 	KERNEL_ASSERT(vm_align_down(start) == start);
 	end = vm_align_up(end);
 
 	// We print the high-level range mapping because it's just one line per range
 	printk("  vm_map: [%llx, %llx) => %lld\n", start, end, flags);
 	for (; start < end; start += PAGE_SIZE) {
-		if ((flags & VM_MAP_FLAG_DEBUG) != 0) {
-			printk("    vm_map: [%llx, %llx) => %lld\n", start, start + PAGE_SIZE, flags);
-		}
-		__vm_map_explicit(root, start, start, flags);
+		vm_map_identity(root, start, flags);
 	}
 }
