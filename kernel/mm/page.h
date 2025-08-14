@@ -6,10 +6,26 @@
 
 #include <kernel/core/assert.h> // for kernel_assert
 
+#include <sys/param.h> // for PAGE_SIZE
 #include <sys/types.h> // for uintptr_t
 
 // Physical address of a memory page.
 typedef uintptr_t page_addr_t;
+
+// How many bits we need to shift to get a page ID from an address.
+//
+// We statically check this is consistent inside mm/page.c.
+#define PAGE_SHIFT 12
+
+// Mask where all page bits are zero and the offset inside the page is nonzero.
+//
+// We statically check this is consistent inside mm/page.c.
+#define PAGE_MASK (PAGE_SIZE - 1)
+
+// Returns true if the given address is page aligned.
+static inline bool page_aligned(uintptr_t addr) {
+	return (addr & PAGE_MASK) == 0;
+}
 
 // It is okay to wait for free pages to become available.
 #define PAGE_ALLOC_WAIT (1 << 0)

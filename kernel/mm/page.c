@@ -82,8 +82,6 @@
   6. panicking if the page was not allocated
 */
 #define RAM_SIZE 0x4000000
-#define PAGE_SHIFT 12
-#define PAGE_MASK (PAGE_SIZE - 1)
 #define MAX_PAGES 0x4000
 #define PAGES_PER_SLOT 64
 #define SLOT_SHIFT 6
@@ -95,8 +93,8 @@ static uint64_t bitmask[NUM_SLOTS];
 void page_init_early(void) {
 	// Runtime assertions on the loaded memory map
 	KERNEL_ASSERT((uintptr_t)__free_ram_end - (uintptr_t)__free_ram_start == RAM_SIZE);
-	KERNEL_ASSERT(((uintptr_t)__free_ram_start & PAGE_MASK) == 0);
-	KERNEL_ASSERT(((uintptr_t)__free_ram_end & PAGE_MASK) == 0);
+	KERNEL_ASSERT(page_aligned((uintptr_t)__free_ram_start));
+	KERNEL_ASSERT(page_aligned((uintptr_t)__free_ram_end));
 
 	// Compile time assertions on our assumptions
 	static_assert((PAGE_SIZE & PAGE_MASK) == 0);
@@ -209,11 +207,11 @@ void page_free(page_addr_t addr) {
 	printk("page_free: %llx %llx %llx\n", (uintptr_t)__free_ram_start, addr, (uintptr_t)__free_ram_end);
 	KERNEL_ASSERT(addr >= (uintptr_t)__free_ram_start);
 	KERNEL_ASSERT(addr < (uintptr_t)__free_ram_end);
-	KERNEL_ASSERT((addr & PAGE_MASK) == 0);
+	KERNEL_ASSERT(page_aligned(addr));
 
 	// Transform to offset that must be aligned
 	uintptr_t offset = addr - (uintptr_t)__free_ram_start;
-	KERNEL_ASSERT((offset & PAGE_MASK) == 0);
+	KERNEL_ASSERT(page_aligned(offset));
 
 	// Transform to index and remove the index
 	size_t index = offset >> PAGE_SHIFT;
