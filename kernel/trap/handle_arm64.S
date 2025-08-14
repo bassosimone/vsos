@@ -235,20 +235,20 @@ __trap_handle_synchronous:
     mov x0, sp
     b sched_return_to_user
 
-    // void trap_restore_user_and_eret(uintptr_t trapframe);
+    // void __trap_restore_user_and_eret(uintptr_t trapframe);
     //
     // Handles returning from userspace from traps.
     .section .text
-    .global trap_restore_user_and_eret
+    .global __trap_restore_user_and_eret
     .align 4
-    .type trap_restore_user_and_eret, %function
-trap_restore_user_and_eret:
+    .type __trap_restore_user_and_eret, %function
+__trap_restore_user_and_eret:
     // Adjust the kernel stack back
     add sp, x0, #816
 
     // Restore TTBR0_EL1 and the padding
-    ldr x10, [sp, #808]
-    ldr x9, [sp, #800]
+    ldr x10, [x0, #808]
+    ldr x9, [x0, #800]
     msr ttbr0_el1, x9
     isb
 

@@ -4,6 +4,7 @@
 
 #include <kernel/asm/arm64.h>           // for msr_vbar_el1
 #include <kernel/boot/boot.h>           // for __vectors_el1
+#include <kernel/core/printk.h>         // for printk
 #include <kernel/drivers/gicv2_arm64.h> // for struct gicv2_device
 #include <kernel/mm/vm.h>               // for struct vm_root_pt
 #include <kernel/sched/sched.h>         // for sched_clock_init_irqs
@@ -92,13 +93,54 @@ void __trap_isr(struct trap_frame *frame) {
 }
 
 void __trap_ssr(struct trap_frame *frame, uint64_t esr, uint64_t far) {
-	// TODO(bassosimone): we should use these
-	(void)esr;
-	(void)far;
+	// Handle cases where the instruction is not an SVC
+	if ((esr >> 26) != 0x15) {
+		panic("unhandled exception: FRAME=0x%llx ESR=0x%llx FAR=0x%llx\n", frame, esr, far);
+	}
 
 	// We pass the syscall number as x8.
 	//
 	// Keep in sync with `./libc/unistd/syscall_arm64.c`.
-	frame->x[0] =
-	    syscall(frame->x[8], frame->x[0], frame->x[1], frame->x[2], frame->x[3], frame->x[4], frame->x[5]);
+	frame->x[0] = syscall( //
+	    frame->x[8],
+	    frame->x[0],
+	    frame->x[1],
+	    frame->x[2],
+	    frame->x[3],
+	    frame->x[4],
+	    frame->x[5]);
+}
+
+[[noreturn]] void trap_restore_user_and_eret(uintptr_t frame) {
+	__trap_restore_user_and_eret(frame);
+}
+
+void trap_dump_frame(uintptr_t frame, const char *context) {
+	struct trap_frame *tp = (struct trap_frame *)frame;
+
+	printk("=== begin trapframe dump <%s> ===\n", context);
+	for (size_t idx = 0; idx < sizeof(tp->x) / sizeof(tp->x[0]); idx++) {
+		printk("x[%d] = 0x%llx\n", idx, tp->x[idx]);
+	}
+
+	printk("sp_el0 = 0x%llx\n", tp->sp_el0);
+
+	for (size_t idx = 0; idx < sizeof(tp->q) / sizeof(tp->q[0]); idx++) {
+		uint64_t high = (uint64_t)(tp->q[idx] >> 64);
+		uint64_t low = (uint64_t)(tp->q[idx] & UINT64_MAX);
+		printk("q[%d] = 0x%llx 0x%llx\n", idx, high, low);
+	}
+
+	printk("elr_el1 = 0x%llx\n", tp->elr_el1);
+
+	printk("spsr_el1 = 0x%llx\n", tp->spsr_el1);
+
+	printk("fpcr = 0x%llx\n", tp->fpcr);
+
+	printk("fpsr = 0x%llx\n", tp->fpsr);
+
+	printk("ttbr0_el1 = 0x%llx\n", tp->ttbr0_el1);
+
+	printk("__unused_padding = 0x%llx\n", tp->__unused_padding);
+	printk("=== end trapframe dump <%s> ===\n", context);
 }
