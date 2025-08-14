@@ -24,6 +24,10 @@
 // Flag indicating a page used for MMIO.
 #define VM_MAP_FLAG_DEVICE (1 << 4)
 
+// Flag indicating that we should print every low-level operation
+// occurring while allocating a page.
+#define VM_MAP_FLAG_DEBUG (1 << 5)
+
 // Ensure that the page is a power of two.
 static_assert(__builtin_popcount(PAGE_SIZE) == 1);
 

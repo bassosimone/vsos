@@ -33,6 +33,9 @@ static inline bool page_aligned(uintptr_t addr) {
 // It is okay to yield when waiting.
 #define PAGE_ALLOC_YIELD (1 << 1)
 
+// Print details about what we are actually allocating.
+#define PAGE_ALLOC_DEBUG (1 << 2)
+
 // Early initialization of the page allocator.
 //
 // Called early by the boot subsystem.
@@ -40,8 +43,8 @@ void page_init_early(void);
 
 // Allocate a single memory page.
 //
-// The returned memory page is *physical* and *unless virtual memory
-// is not enabled* cannot be touched without remapping.
+// The returned memory page is *physical*. However, the kernel maps the
+// whole RAM, therefore, for the kernel it is also virtual.
 //
 // The returned memory page *content* is arbitrary. In most if not all
 // cases, the right thing(TM) to do is to map and clear it.
@@ -60,11 +63,13 @@ static inline page_addr_t page_must_alloc(uint64_t flags) {
 
 // Free a memory page given its address.
 //
-// The given address is *physical*. If you start from a virtual
-// page, then you need to unmap it before freeing it.
+// The given address is *physical*. However, we use identity mapping and the
+// kernel maps the whole available RAM, so it is also virtual.
+//
+// The flags allow you to pass PAGE_ALLOC_DEBUG for debug printing.
 //
 // Panics when the address is not aligned or the page is not allocated.
-void page_free(page_addr_t addr);
+void page_free(page_addr_t addr, uint64_t flags);
 
 // Prints the bitmask using printk.
 void page_debug_printk(void);

@@ -107,7 +107,7 @@ void page_init_early(void) {
 }
 
 // Allocate a free page returning 0 and the page index on success, -ENOMEM on failure.
-static inline int64_t bitmask_alloc(size_t *index) {
+static inline int64_t bitmask_alloc(size_t *index, uint64_t flags) {
 	KERNEL_ASSERT(index != 0);
 	*index = 0; // avoid possible UB
 
@@ -127,7 +127,9 @@ static inline int64_t bitmask_alloc(size_t *index) {
 			KERNEL_ASSERT(slot_idx <= (SIZE_MAX >> SLOT_SHIFT));
 			*index = (slot_idx << SLOT_SHIFT) | bit_idx;
 
-			printk("bitmask_alloc: %llx %llx => %llx\n", slot_idx, bit_idx, *index);
+			if ((flags & PAGE_ALLOC_DEBUG) != 0) {
+				printk("bitmask_alloc: %llx %llx => %llx\n", slot_idx, bit_idx, *index);
+			}
 			return 0;
 		}
 	}
@@ -135,7 +137,7 @@ static inline int64_t bitmask_alloc(size_t *index) {
 }
 
 // Free an allocated page panicking if it was not allocated.
-static inline void bitmask_free(size_t index) {
+static inline void bitmask_free(size_t index, uint64_t flags) {
 	KERNEL_ASSERT(index < MAX_PAGES);
 
 	size_t slot_idx = (index >> SLOT_SHIFT);
@@ -148,7 +150,9 @@ static inline void bitmask_free(size_t index) {
 	KERNEL_ASSERT((bitmask[slot_idx] & bit) != 0); // not allocated?
 
 	bitmask[slot_idx] &= ~bit;
-	printk("bitmask_free: %llx => %llx %llx\n", index, slot_idx, bit_idx);
+	if ((flags & PAGE_ALLOC_DEBUG) != 0) {
+		printk("bitmask_free: %llx => %llx %llx\n", index, slot_idx, bit_idx);
+	}
 }
 
 // Spinlock for protecting allocation.
@@ -183,7 +187,7 @@ int64_t page_alloc(page_addr_t *addr, uint64_t flags) {
 		}
 
 		size_t index = 0;
-		int64_t rc = bitmask_alloc(&index);
+		int64_t rc = bitmask_alloc(&index, flags);
 		spinlock_release(&lock);
 
 		if (rc < 0) {
@@ -197,14 +201,21 @@ int64_t page_alloc(page_addr_t *addr, uint64_t flags) {
 		}
 
 		*addr = make_page_addr(index);
-		printk("page_alloc: %llx => %llx\n", index, *addr);
+		if ((flags & PAGE_ALLOC_DEBUG) != 0) {
+			printk("page_alloc: %llx => %llx\n", index, *addr);
+		}
 		return 0;
 	}
 }
 
-void page_free(page_addr_t addr) {
+void page_free(page_addr_t addr, uint64_t flags) {
 	// Ensure the address is within RAM and aligned
-	printk("page_free: %llx %llx %llx\n", (uintptr_t)__free_ram_start, addr, (uintptr_t)__free_ram_end);
+	if ((flags & PAGE_ALLOC_DEBUG) != 0) {
+		printk("page_free: %llx %llx %llx\n",
+		       (uintptr_t)__free_ram_start,
+		       addr,
+		       (uintptr_t)__free_ram_end);
+	}
 	KERNEL_ASSERT(addr >= (uintptr_t)__free_ram_start);
 	KERNEL_ASSERT(addr < (uintptr_t)__free_ram_end);
 	KERNEL_ASSERT(page_aligned(addr));
@@ -215,9 +226,11 @@ void page_free(page_addr_t addr) {
 
 	// Transform to index and remove the index
 	size_t index = offset >> PAGE_SHIFT;
-	printk("page_free: %llx => %llx\n", addr, index);
+	if ((flags & PAGE_ALLOC_DEBUG) != 0) {
+		printk("page_free: %llx => %llx\n", addr, index);
+	}
 	spinlock_acquire(&lock);
-	bitmask_free(index);
+	bitmask_free(index, flags);
 	spinlock_release(&lock);
 }
 

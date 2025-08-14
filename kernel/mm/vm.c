@@ -30,6 +30,9 @@ static inline void __vm_map_kernel_memory(struct vm_root_pt root) {
 
 	printk("vm: .stack [%llx, %llx) => WRITE\n", __stack_bottom, __stack_top);
 	vm_map(root, (uint64_t)__stack_bottom, (uint64_t)__stack_top, VM_MAP_FLAG_WRITE);
+
+	printk("vm: __free_ram [%llx, %llx) => WRITE\n", __free_ram_start, __free_ram_end);
+	vm_map(root, (uint64_t)__free_ram_start, (uint64_t)__free_ram_end, VM_MAP_FLAG_WRITE);
 }
 
 // Requests the devices to install their memory map.
@@ -76,9 +79,12 @@ void vm_map(struct vm_root_pt root, page_addr_t start, uintptr_t end, vm_map_fla
 	KERNEL_ASSERT(vm_align_down(start) == start);
 	end = vm_align_up(end);
 
+	// We print the high-level range mapping because it's just one line per range
 	printk("  vm_map: [%llx, %llx) => %lld\n", start, end, flags);
 	for (; start < end; start += PAGE_SIZE) {
-		printk("    vm_map: [%llx, %llx) => %lld\n", start, start + PAGE_SIZE, flags);
-		__vm_map_explicit_assume_aligned(root, start, start, flags);
+		if ((flags & VM_MAP_FLAG_DEBUG) != 0) {
+			printk("    vm_map: [%llx, %llx) => %lld\n", start, start + PAGE_SIZE, flags);
+		}
+		__vm_map_explicit(root, start, start, flags);
 	}
 }
