@@ -114,10 +114,16 @@ void __vm_map_explicit_assume_aligned(struct vm_root_pt root,
                                       page_addr_t paddr,
                                       uintptr_t vaddr,
                                       vm_map_flags_t flags) {
-	// Step 0: validate assumptions
+	// 1. validate assumptions
 	KERNEL_ASSERT(PAGE_SIZE == 4096);
 
-	// Step 1: resolve indices
+	// 2. see whether we need to debug page allocations
+	uint64_t palloc_flags = PAGE_ALLOC_WAIT;
+	if ((flags & VM_MAP_FLAG_DEBUG) != 0) {
+		palloc_flags |= PAGE_ALLOC_DEBUG;
+	}
+
+	// 3. resolve indices
 	uint64_t l1_idx = L1_INDEX(vaddr);
 	if ((flags & VM_MAP_FLAG_DEBUG) != 0) {
 		printk("      L1_INDEX(%llx) = %llx\n", vaddr, l1_idx);
@@ -133,7 +139,7 @@ void __vm_map_explicit_assume_aligned(struct vm_root_pt root,
 		printk("      L3_INDEX(%llx) = %llx\n", vaddr, l3_idx);
 	}
 
-	// Step 2: walk L1
+	// 4. walk L1
 	uint64_t *l1_phys = (uint64_t *)root.table;
 	if ((flags & VM_MAP_FLAG_DEBUG) != 0) {
 		printk("      L1_PHYS = %llx\n", l1_phys);
@@ -145,7 +151,7 @@ void __vm_map_explicit_assume_aligned(struct vm_root_pt root,
 	}
 
 	if ((l1_virt[l1_idx] & ARM64_PTE_VALID) == 0) {
-		uintptr_t l2_phys = page_must_alloc(PAGE_ALLOC_WAIT);
+		uintptr_t l2_phys = page_must_alloc(palloc_flags);
 		l1_virt[l1_idx] = make_table_desc(l2_phys);
 		dsb_ishst(); // ensure visibility
 	}
@@ -153,7 +159,7 @@ void __vm_map_explicit_assume_aligned(struct vm_root_pt root,
 		printk("      L1_VIRT[L1_INDEX] = %llx\n", l1_virt[l1_idx]);
 	}
 
-	// Step 3: walk L2
+	// 5. walk L2
 	uint64_t *l2_phys = (uint64_t *)(l1_virt[l1_idx] & ARM64_PTE_ADDR_MASK);
 	if ((flags & VM_MAP_FLAG_DEBUG) != 0) {
 		printk("      L2_PHYS = %llx\n", l2_phys);
@@ -162,7 +168,7 @@ void __vm_map_explicit_assume_aligned(struct vm_root_pt root,
 	uint64_t *l2_virt = l2_phys; // direct mapping
 
 	if ((l2_virt[l2_idx] & ARM64_PTE_VALID) == 0) {
-		uintptr_t l3_phys = page_must_alloc(PAGE_ALLOC_WAIT);
+		uintptr_t l3_phys = page_must_alloc(palloc_flags);
 		l2_virt[l2_idx] = make_table_desc(l3_phys);
 		dsb_ishst(); // ensure visibility
 	}
@@ -170,7 +176,7 @@ void __vm_map_explicit_assume_aligned(struct vm_root_pt root,
 		printk("      L2_VIRT[L2_INDEX] = %llx\n", l2_virt[l2_idx]);
 	}
 
-	// Step 4: try to insert the L3 leaf
+	// 6. try to insert the L3 leaf
 	uint64_t *l3_phys = (uint64_t *)(l2_virt[l2_idx] & ARM64_PTE_ADDR_MASK);
 
 	uint64_t *l3_virt = l3_phys; // direct mapping
