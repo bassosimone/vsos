@@ -7,6 +7,7 @@
 #include <kernel/core/assert.h> // for KERNEL_ASSERT
 #include <kernel/core/panic.h>  // for panic
 #include <kernel/core/printk.h> // for printk
+#include <kernel/exec/elf64.h>  // for elf64_load
 #include <kernel/init/initrd.h> // for initrd_read_early
 #include <kernel/mm/page.h>     // for page_alloc
 #include <kernel/mm/vm.h>       // for vm_switch
@@ -90,9 +91,16 @@ static void __kernel_zygote(void *opaque) {
 	printk("started echo thread: %d\n", tid);
 
 	// 6. load the initial ramdisk
-	struct initrd_info info = {.base = 0, .count = 0};
-	int rc = initrd_load(&info);
+	struct initrd_info rd_info = {.base = 0, .count = 0};
+	int rc = initrd_load(&rd_info);
 	KERNEL_ASSERT(rc == 0);
+	KERNEL_ASSERT(rd_info.base > 0 && rd_info.count > 0);
+
+	// 7. interpret the ramdisk as an ELF binary and load it into memory
+	uintptr_t user_entry = 0;
+	rc = elf64_load(&user_entry, (const void *)rd_info.base, rd_info.count);
+	KERNEL_ASSERT(rc == 0);
+	KERNEL_ASSERT(user_entry != 0);
 }
 
 [[noreturn]] void __kernel_main(void) {

@@ -56,6 +56,8 @@ build kernel/core/printk.o: kernel_cc kernel/core/printk.c
 build kernel/drivers/gicv2_arm64.o: kernel_cc kernel/drivers/gicv2_arm64.c
 build kernel/drivers/pl011_arm64.o: kernel_cc kernel/drivers/pl011_arm64.c
 
+build kernel/exec/elf64.o: kernel_cc kernel/exec/elf64.c
+
 build kernel/init/initrd.o: kernel_cc kernel/init/initrd.c
 
 build kernel/mm/vm_arm64.o: kernel_cc kernel/mm/vm_arm64.c
@@ -90,6 +92,7 @@ build kernel.elf: kernel_ld $
   kernel/core/printk.o $
   kernel/drivers/gicv2_arm64.o $
   kernel/drivers/pl011_arm64.o $
+  kernel/exec/elf64.o $
   kernel/init/initrd.o $
   kernel/mm/page.o $
   kernel/mm/vm.o $

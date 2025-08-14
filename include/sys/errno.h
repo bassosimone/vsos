@@ -10,6 +10,9 @@
 // Input/output error.
 #define EIO 5
 
+// Exec format error.
+#define ENOEXEC 8
+
 // Bad file descriptor.
 #define EBADF 9
 
