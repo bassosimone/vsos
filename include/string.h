@@ -6,6 +6,8 @@
 
 #include <sys/types.h>
 
+int memcmp(const void *vleft, const void *vright, size_t count);
+
 void *memcpy(void *dest, const void *src, size_t n);
 
 void *memset(void *dest, int c, size_t n);
