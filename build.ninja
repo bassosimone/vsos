@@ -60,6 +60,7 @@ build kernel/exec/elf64.o: kernel_cc kernel/exec/elf64.c
 build kernel/exec/load.o: kernel_cc kernel/exec/load.c
 
 build kernel/init/initrd.o: kernel_cc kernel/init/initrd.c
+build kernel/init/shell.o: kernel_incbin kernel/init/shell.S | shell.elf
 
 build kernel/mm/vm_arm64.o: kernel_cc kernel/mm/vm_arm64.c
 build kernel/mm/page.o: kernel_cc kernel/mm/page.c
@@ -79,8 +80,6 @@ build kernel/trap/vector_arm64.o: kernel_cc kernel/trap/vector_arm64.S
 
 build kernel/tty/uart_arm64.o: kernel_cc kernel/tty/uart_arm64.c
 
-build kernel/uspace/shell.o: kernel_incbin kernel/uspace/shell.S | shell.elf
-
 build libc/string/memcmp_kernel.o: kernel_cc libc/string/memcmp.c
 build libc/string/memcpy_kernel.o: kernel_cc libc/string/memcpy.c
 build libc/string/memset_kernel.o: kernel_cc libc/string/memset.c
@@ -97,6 +96,7 @@ build kernel.elf: kernel_ld $
   kernel/exec/elf64.o $
   kernel/exec/load.o $
   kernel/init/initrd.o $
+  kernel/init/shell.o $
   kernel/mm/page.o $
   kernel/mm/vm.o $
   kernel/mm/vm_arm64.o $
@@ -110,7 +110,6 @@ build kernel.elf: kernel_ld $
   kernel/trap/trap_arm64.o $
   kernel/trap/vector_arm64.o $
   kernel/tty/uart_arm64.o $
-  kernel/uspace/shell.o $
   libc/string/memcmp_kernel.o $
   libc/string/memcpy_kernel.o $
   libc/string/memset_kernel.o $

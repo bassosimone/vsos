@@ -1,4 +1,4 @@
-    // File: kernel/uspace/shell.S
+    // File: kernel/init/shell.S
     // Purpose: include the shell as a raw binary into the kernel
     // SPDX-License-Identifier: MIT
 
