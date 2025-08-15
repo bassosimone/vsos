@@ -61,6 +61,7 @@ build kernel/exec/load.o: kernel_cc kernel/exec/load.c
 
 build kernel/init/initrd.o: kernel_cc kernel/init/initrd.c
 build kernel/init/shell.o: kernel_incbin kernel/init/shell.S | shell.elf
+build kernel/init/switch.o: kernel_cc kernel/init/switch.c
 
 build kernel/mm/vm_arm64.o: kernel_cc kernel/mm/vm_arm64.c
 build kernel/mm/page.o: kernel_cc kernel/mm/page.c
@@ -97,6 +98,7 @@ build kernel.elf: kernel_ld $
   kernel/exec/load.o $
   kernel/init/initrd.o $
   kernel/init/shell.o $
+  kernel/init/switch.o $
   kernel/mm/page.o $
   kernel/mm/vm.o $
   kernel/mm/vm_arm64.o $
