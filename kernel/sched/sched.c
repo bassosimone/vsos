@@ -34,12 +34,9 @@
 #define SCHED_THREAD_STACK_SIZE 8192
 
 // A process contains resources including threads.
-//
-// Currently empty since there are no resources shared by
-// threads within the same userspace process.
-//
-// We will need to add here the file descriptors.
-struct sched_process {};
+struct sched_process {
+	struct vm_root_pt page_table;
+};
 
 // A schedulable thread of execution.
 struct sched_thread {
@@ -222,6 +219,17 @@ static inline struct sched_process *must_get_process(struct sched_thread *thread
 	return thread->__proc;
 }
 
+int64_t sched_current_process_page_table(struct vm_root_pt *table) {
+	KERNEL_ASSERT(table != 0);
+	KERNEL_ASSERT(current != 0);
+	if (current->__proc == 0) {
+		*table = (struct vm_root_pt){0};
+		return -ESRCH;
+	}
+	*table = current->__proc->page_table;
+	return 0;
+}
+
 int64_t sched_process_start(struct load_program *program) {
 	// 1. some sanity checks to make sure it's all good
 	KERNEL_ASSERT(current != 0);
@@ -238,15 +246,18 @@ int64_t sched_process_start(struct load_program *program) {
 	struct sched_process *proc = must_get_process(current);
 	KERNEL_ASSERT(proc == current->__proc);
 
-	// 4. permanently attach this thread to a user process
+	// 4. ensure we know the process page table.
+	proc->page_table = program->root;
+
+	// 5. permanently attach this thread to a user process
 	current->flags |= SCHED_THREAD_FLAG_PROCESS;
 
-	// 5. call assembly code to initialize the trapframe
+	// 6. call assembly code to initialize the trapframe
 	// relative to the current thread stack. The idea here
 	// is to simulate having taking a sync trap.
 	current->trapframe = trap_create_process_frame(program->entry, program->root.table, program->stack_top);
 
-	// 6. return to userspace. This is another geronimooooo case!
+	// 7. return to userspace. This is another geronimooooo case!
 	trap_restore_user_and_eret(current->trapframe);
 	panic("trap_restore_user_and_eret should never return\n");
 }

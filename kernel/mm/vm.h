@@ -96,6 +96,17 @@ static inline void vm_map_identity(struct vm_root_pt root, page_addr_t paddr, vm
 	return vm_map_explicit(root, paddr, paddr, flags);
 }
 
+// Given the user root page table and a user vaddr, map it back to a paddr.
+//
+// Use the flags to request for debugging.
+//
+// Returns 0 on success and -EINVAL on failure.
+//
+// Panics if paddr is 0.
+//
+// Clears paddr to 0 in case of error.
+int64_t vm_user_virt_to_phys(uintptr_t *paddr, struct vm_root_pt root, uintptr_t vaddr, vm_map_flags_t flags);
+
 // Internal machine dependent mapping implementation that assumes that
 // we have already checked that arguments are correctly aligned.
 //

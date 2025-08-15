@@ -7,6 +7,9 @@
 
 // We try to use the same numbers used by Linux
 
+// No such process.
+#define ESRCH 3
+
 // Input/output error.
 #define EIO 5
 
@@ -19,11 +22,14 @@
 // Resource temporarily unavailable.
 #define EAGAIN 11
 
+// Operation would block.
+#define EWOULDBLOCK EAGAIN
+
 // Out of memory.
 #define ENOMEM 12
 
-// Operation would block.
-#define EWOULDBLOCK EAGAIN
+// Bad address.
+#define EFAULT 14
 
 // Invalid argument.
 #define EINVAL 22

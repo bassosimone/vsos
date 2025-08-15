@@ -10,6 +10,8 @@
 #include <kernel/mm/page.h>     // for page_alloc
 #include <kernel/mm/vm.h>       // for __vm_map_kernel_memory
 
+#include <sys/errno.h> // for EFAULT
+
 // Physical address mask: page-aligned 4 KiB (bits [11:0] must be 0)
 #define ARM64_PTE_ADDR_MASK 0x0000FFFFFFFFF000ULL
 
@@ -26,6 +28,7 @@
 #define ARM64_AP_RO_EL1 (0b10ULL << 6)
 #define ARM64_AP_RW_EL0 (0b01ULL << 6)
 #define ARM64_AP_RO_EL0 (0b11ULL << 6)
+#define ARM64_AP_MASK (0x3ULL << 6)
 
 // MAIR index (attr index into MAIR_EL1)
 #define ARM64_PTE_ATTRINDX(n) (((uint64_t)(n) & 0x7) << 2)
@@ -95,6 +98,9 @@ static uint64_t make_leaf_pte(uintptr_t paddr, vm_map_flags_t flags) {
 
 	// Mark user pages as non-global to protect
 	// the memory assigned to each user
+	//
+	// CAUTION: if you change this you also need to
+	// change the logic to find user pages
 	if (is_user) {
 		pte |= ARM64_PTE_nG;
 	}
@@ -192,6 +198,93 @@ void __vm_map_explicit_assume_aligned(struct vm_root_pt root,
 	// TODO(bassosimone): as long as we are always creating new mappings
 	// and context switching with a single process, we do not need to add
 	// support for TLB invalidation to this code.
+}
+
+int64_t vm_user_virt_to_phys(uintptr_t *paddr, struct vm_root_pt root, uintptr_t vaddr, vm_map_flags_t flags) {
+	// 0. let the user know what we're doing and clear paddr
+	if ((flags & VM_MAP_FLAG_DEBUG) != 0) {
+		printk("vm_find_page: <0x%llx> vaddr=0x%llx\n", root.table, vaddr);
+	}
+	KERNEL_ASSERT(paddr != 0);
+	*paddr = 0;
+
+	// 1. resolve indices
+	uint64_t l1_idx = L1_INDEX(vaddr);
+	if ((flags & VM_MAP_FLAG_DEBUG) != 0) {
+		printk("  L1_INDEX(%llx) = %llx\n", vaddr, l1_idx);
+	}
+
+	uint64_t l2_idx = L2_INDEX(vaddr);
+	if ((flags & VM_MAP_FLAG_DEBUG) != 0) {
+		printk("  L2_INDEX(%llx) = %llx\n", vaddr, l2_idx);
+	}
+
+	uint64_t l3_idx = L3_INDEX(vaddr);
+	if ((flags & VM_MAP_FLAG_DEBUG) != 0) {
+		printk("  L3_INDEX(%llx) = %llx\n", vaddr, l3_idx);
+	}
+
+	// 2. walk L1
+	//
+	// Because these are user pages and the page table is an user page
+	// table, we cannot actually use virtual addrs. Thus we'll rely
+	// on our identity mapping to perform a physical walk.
+	uint64_t *l1_phys = (uint64_t *)root.table;
+	if ((flags & VM_MAP_FLAG_DEBUG) != 0) {
+		printk("  L1_PHYS = %llx\n", l1_phys);
+	}
+
+	if ((l1_phys[l1_idx] & ARM64_PTE_VALID) == 0) {
+		return -EFAULT;
+	}
+	if ((flags & VM_MAP_FLAG_DEBUG) != 0) {
+		printk("  L1_PHYS[L1_INDEX] = %llx\n", l1_phys[l1_idx]);
+	}
+
+	// 3. walk L2
+	uint64_t *l2_phys = (uint64_t *)(l1_phys[l1_idx] & ARM64_PTE_ADDR_MASK);
+	if ((flags & VM_MAP_FLAG_DEBUG) != 0) {
+		printk("  L2_PHYS = %llx\n", l2_phys);
+	}
+
+	if ((l2_phys[l2_idx] & ARM64_PTE_VALID) == 0) {
+		return -EFAULT;
+	}
+	if ((flags & VM_MAP_FLAG_DEBUG) != 0) {
+		printk("  L2_PHYS[L2_INDEX] = %llx\n", l2_phys[l2_idx]);
+	}
+
+	// 3. find the L3 leaf
+	uint64_t *l3_phys = (uint64_t *)(l2_phys[l2_idx] & ARM64_PTE_ADDR_MASK);
+
+	// Critical: the page must be valid and non-global (user). For good
+	// measure ensure this page is not a page the kernel can touch. Finally,
+	// make sure the page is not executable.
+	//
+	// Basically: we don't want users to pass through this escape hatch
+	// to modify executable code or read/write our data.
+	//
+	// CAUTION: keep this code in sync with how we create PTEs above.
+	uint64_t pte = l3_phys[l3_idx];
+	if ((pte & ARM64_PTE_VALID) == 0) {
+		return -EFAULT;
+	}
+	if ((pte & ARM64_PTE_nG) == 0) {
+		return -EFAULT;
+	}
+	uint64_t perms = pte & ARM64_AP_MASK;
+	if (perms == ARM64_AP_RW_EL1 || perms == ARM64_AP_RO_EL1) {
+		return -EFAULT;
+	}
+	if ((pte & (ARM64_PTE_UXN | ARM64_PTE_PXN)) != (ARM64_PTE_UXN | ARM64_PTE_PXN)) {
+		return -EFAULT;
+	}
+
+	// 4. return the physical address
+	uintptr_t phys_page = l3_phys[l3_idx] & ARM64_PTE_ADDR_MASK; // Extract page address
+	uintptr_t page_offset = vaddr & 0xFFF;                       // Get offset within page
+	*paddr = phys_page + page_offset;
+	return 0;
 }
 
 void __vm_switch(struct vm_root_pt root) {

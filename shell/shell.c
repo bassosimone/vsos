@@ -6,10 +6,13 @@
 #include <string.h> // for strncmp
 #include <unistd.h> // for write
 
+// The entry point of our user program.
+__attribute__((section(".text.start"))) [[noreturn]] void _start(void);
+
 __attribute__((section(".text.start"))) [[noreturn]] void _start(void) {
 	while (1) {
 	prompt:
-		(void)write(1, "> ", 2);
+		(void)write(1, "\n> ", 2);
 		char cmdline[128];
 		for (int idx = 0;; idx++) {
 			ssize_t rc = read(0, &cmdline[idx], 1);

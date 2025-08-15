@@ -104,6 +104,15 @@ int64_t sched_thread_join(int64_t tid, void **retvalptr);
 // Opaque representation of a kernel thread.
 struct sched_thread;
 
+// Get the current process page table.
+//
+// Returns a negative errno on failure and zero on success.
+//
+// Panics if table is 0.
+//
+// On failure, initializes *table to a zero value.
+int64_t sched_current_process_page_table(struct vm_root_pt *table);
+
 // Switch to the first runnable thread and never return.
 //
 // The control will constantly switch between runnable threads.

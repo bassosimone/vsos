@@ -68,6 +68,7 @@ build kernel/mm/vm.o: kernel_cc kernel/mm/vm.c
 build kernel/sched/sched.o: kernel_cc kernel/sched/sched.c
 build kernel/sched/switch_arm64.o: kernel_asm kernel/sched/switch_arm64.S
 
+build kernel/syscall/io.o: kernel_cc kernel/syscall/io.c
 build kernel/syscall/read.o: kernel_cc kernel/syscall/read.c
 build kernel/syscall/syscall.o: kernel_cc kernel/syscall/syscall.c
 build kernel/syscall/write.o: kernel_cc kernel/syscall/write.c
@@ -101,6 +102,7 @@ build kernel.elf: kernel_ld $
   kernel/mm/vm_arm64.o $
   kernel/sched/sched.o $
   kernel/sched/switch_arm64.o $
+  kernel/syscall/io.o $
   kernel/syscall/read.o $
   kernel/syscall/syscall.o $
   kernel/syscall/write.o $
