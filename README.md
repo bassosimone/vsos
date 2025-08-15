@@ -1,5 +1,7 @@
 # VSOS: Very Small Operating System
 
+![Let's return to userspace!](vsos.png)
+
 VSOS is a really-basic, portable, hobby operating system written in C.
 
 ## Roadmap
