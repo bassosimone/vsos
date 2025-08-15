@@ -17,6 +17,7 @@ __trap_handle_el1h_irq:
     // Basically this means no nested interrupts.
 
     // Bump the stack frame to make space for all the variables to save.
+    // Frame layout documented in kernel/trap/trap_arm64.h (struct trap_frame)
     sub sp, sp, #816
 
     // Save general purpose registers and user stack pointer.
@@ -161,6 +162,7 @@ __trap_handle_synchronous:
     // Basically this means no nested interrupts.
 
     // Bump the stack frame to make space for all the variables to save.
+    // Frame layout documented in kernel/trap/trap_arm64.h (struct trap_frame)
     sub sp, sp, #816
 
     // Save general purpose registers and user stack pointer.
@@ -318,6 +320,7 @@ trap_create_process_frame:
     // Arguments: x0 = entry point, x1 = page table, x2 = user stack
 
     // Bump the stack frame to make space for all the variables to save.
+    // Frame layout documented in kernel/trap/trap_arm64.h (struct trap_frame)
     sub sp, sp, #816
 
     // Move zero to x9 so we can use it for setting things to zero.

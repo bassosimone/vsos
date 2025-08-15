@@ -15,7 +15,8 @@ __sched_switch:
 
     // Step 1: save current thread state to prev->sp.
     //
-    // 1.1. reserve the required stack space
+    // 1.1. reserve the required stack space for callee-saved registers per ARM64 AAPCS
+    // Layout: GPRs x19-x30 (96B) + SIMD q8-q15 (128B) + FPCR/FPSR (16B) = 240B
     sub sp, sp, #240  // Note: keep in sync with __sched_build_switch_frame
 
     // 1.2. save GPRs (x19–x30) individually, 8 bytes each

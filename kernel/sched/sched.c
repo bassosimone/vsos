@@ -330,6 +330,11 @@ static struct sched_thread *select_runnable(void) {
 	events = 0;
 
 	// 4. Switch to a runnable thread using a ~fair round-robin scheduling.
+	//
+	// Algorithm: Round-robin through all thread slots using fair_id as cursor.
+	// The fair_id wraps around ensuring each thread gets considered in turn.
+	// Event-driven wakeup: blocked threads are awakened when their waited-for
+	// events (channels) occur, using bitwise AND between blockedby and events.
 	for (size_t idx = 0; idx < SCHED_MAX_THREADS; idx++) {
 		// 4.1. get the next thread we should consider for running.
 		struct sched_thread *next = &threads[fair_id];
@@ -427,6 +432,19 @@ int64_t sched_thread_join(int64_t tid, void **retvalptr) {
 
 	uint64_t oepoch = 0;
 	for (;;) {
+
+		// Join algorithm handles several race conditions:
+		//
+		// 1. Epoch tracking: Detects if target thread exited and slot was recycled
+		//    while we were sleeping (oepoch != other->epoch indicates recycling)
+		//
+		// 2. Broadcast wakeup: We wait for ANY thread termination, not just target
+		//    (scales poorly but avoids complex per-thread wait queues)
+		//
+		// 3. State transitions: RUNNABLE/BLOCKED -> wait, EXITED -> collect and cleanup,
+		//    UNUSED -> target never existed or was detached
+		//
+		// 4. Detach race: Thread can detach itself (become non-joinable) while we wait
 
 		// Do not assume the thread state is stable
 		// for example pthread_detach(self) can cause
