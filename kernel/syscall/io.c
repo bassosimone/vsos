@@ -2,7 +2,7 @@
 // Purpose: copy_from_user and copy_to_user
 // SPDX-License-Identifier: MIT
 
-#include <kernel/mm/page.h>     // for PAGE_MASK
+#include <kernel/mm/page.h>     // for PAGE_OFFSET_MASK
 #include <kernel/mm/vm.h>       // for vm_user_virt_to_phys
 #include <kernel/sched/sched.h> // for sched_current_process_page_table
 #include <kernel/syscall/io.h>  // for copy_from_user
@@ -34,7 +34,7 @@ ssize_t copy_from_user(char *dst, const char *src, size_t count) {
 		}
 
 		// Calculate how many bytes we can copy from this page
-		size_t page_offset = phys_addr & PAGE_MASK;
+		size_t page_offset = phys_addr & PAGE_OFFSET_MASK;
 		size_t available_in_page = PAGE_SIZE - page_offset;
 		size_t remaining = count - offset;
 		size_t to_copy = (available_in_page < remaining) ? available_in_page : remaining;
@@ -70,7 +70,7 @@ ssize_t copy_to_user(char *dst, const char *src, size_t count) {
 		}
 
 		// Calculate how many bytes we can copy to this page
-		size_t page_offset = phys_addr & PAGE_MASK;
+		size_t page_offset = phys_addr & PAGE_OFFSET_MASK;
 		size_t available_in_page = PAGE_SIZE - page_offset;
 		size_t remaining = count - offset;
 		size_t to_copy = (available_in_page < remaining) ? available_in_page : remaining;

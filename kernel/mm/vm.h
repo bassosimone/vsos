@@ -33,13 +33,13 @@ static_assert(__builtin_popcount(PAGE_SIZE) == 1);
 
 // Align a value to the value of the page below the value itself.
 static inline uintptr_t vm_align_down(uintptr_t value) {
-	return value & ~PAGE_MASK;
+	return value & ~PAGE_OFFSET_MASK;
 }
 
 // Align a value to the value of the page above the value itself.
 static inline uintptr_t vm_align_up(uintptr_t value) {
-	KERNEL_ASSERT(value <= UINTPTR_MAX - PAGE_MASK);
-	return (value + PAGE_MASK) & ~PAGE_MASK;
+	KERNEL_ASSERT(value <= UINTPTR_MAX - PAGE_OFFSET_MASK);
+	return (value + PAGE_OFFSET_MASK) & ~PAGE_OFFSET_MASK;
 }
 
 // Type representing the root page table.

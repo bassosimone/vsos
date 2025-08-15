@@ -97,7 +97,7 @@ void page_init_early(void) {
 	KERNEL_ASSERT(page_aligned((uintptr_t)__free_ram_end));
 
 	// Compile time assertions on our assumptions
-	static_assert((PAGE_SIZE & PAGE_MASK) == 0);
+	static_assert((PAGE_SIZE & PAGE_OFFSET_MASK) == 0);
 	static_assert(RAM_SIZE / PAGE_SIZE == MAX_PAGES);
 	static_assert(RAM_SIZE % PAGE_SIZE == 0);
 	static_assert(PAGES_PER_SLOT == (1ULL << SLOT_SHIFT));

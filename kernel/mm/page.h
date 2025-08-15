@@ -20,11 +20,11 @@ typedef uintptr_t page_addr_t;
 // Mask where all page bits are zero and the offset inside the page is nonzero.
 //
 // We statically check this is consistent inside mm/page.c.
-#define PAGE_MASK (PAGE_SIZE - 1)
+#define PAGE_OFFSET_MASK (PAGE_SIZE - 1)
 
 // Returns true if the given address is page aligned.
 static inline bool page_aligned(uintptr_t addr) {
-	return (addr & PAGE_MASK) == 0;
+	return (addr & PAGE_OFFSET_MASK) == 0;
 }
 
 // It is okay to wait for free pages to become available.
