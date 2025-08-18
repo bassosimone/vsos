@@ -2,12 +2,12 @@
 // Purpose: Switch from kernel space to user space
 // SPDX-License-Identifier: MIT
 
-#include <kernel/core/assert.h>  // for KERNEL_ASSERT
-#include <kernel/exec/elf64.h>   // for elf64_parse
-#include <kernel/exec/load.h>    // for load_elf64
-#include <kernel/init/initrd.h>  // for initrd_load
-#include <kernel/init/switch.h>  // the subsystem's API
-#include <kernel/sched/sched.h>  // for sched_process_start
+#include <kernel/core/assert.h> // for KERNEL_ASSERT
+#include <kernel/exec/elf64.h>  // for elf64_parse
+#include <kernel/exec/load.h>   // for load_elf64
+#include <kernel/init/initrd.h> // for initrd_load
+#include <kernel/init/switch.h> // the subsystem's API
+#include <kernel/sched/sched.h> // for sched_process_exec
 
 [[noreturn]] void switch_to_userspace(void) {
 	// 1. load the initial ramdisk
@@ -31,7 +31,6 @@
 	KERNEL_ASSERT(rc == 0);
 
 	// 4. the super geronimo thing: return to userspace
-	rc = sched_process_start(&program);
-	KERNEL_ASSERT(rc >= 0);
+	sched_process_exec(&program);
 	panic("unreachable code");
 }

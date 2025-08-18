@@ -45,25 +45,23 @@ typedef void(sched_thread_main_t)(void *opaque);
 // Returns a negative errno value or the thread ID (>= 0).
 int64_t sched_thread_start(sched_thread_main_t *main, void *opaque, __flags32_t flags);
 
-// Starts a kernel thread running a user process.
+// Force the current thread to return to userspace and execute the given program.
 //
-// The return value is a valid thread ID (>= 0) or a negative errno.
-//
-// The kernel thread will setup the process resources and prepare a synthetic
-// trapframe to return to userspace using `ERET`.
+// The current thread will setup the process resources and prepare a synthetic
+// trapframe and then return to userspace using `ERET`.
 //
 // From then on, the kernel thread will be the permanent parent of the process.
-//
-// The kernel thread will be marked as joinable, because user processes must
-// be awaited by other user processes and provide a status.
 //
 // Note that, when we reach this point of the `execve` syscall, we have basically
 // already have parsed the ELF, so we known we can execute something, and what
 // would prevent the process from starting is lack of system resources.
 //
-// The kernel thread is also marked as a user process, so that tools like `ps`
+// Also, the current thread is marked as a user process, so that tools like `ps`
 // report that this is a user process with the given ID.
-int64_t sched_process_start(struct load_program *program);
+//
+// Additionally, the thread is marked as joinable since processes are joinable
+// by default, including init, for which we should panic if it returns.
+[[noreturn]] void sched_process_exec(struct load_program *program);
 
 // Yields the CPU to another runnable thread.
 //

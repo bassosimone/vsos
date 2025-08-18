@@ -232,7 +232,7 @@ __status_t sched_current_process_page_table(struct vm_root_pt *table) {
 	return 0;
 }
 
-int64_t sched_process_start(struct load_program *program) {
+[[noreturn]] void sched_process_exec(struct load_program *program) {
 	// 1. some sanity checks to make sure it's all good
 	KERNEL_ASSERT(current != 0);
 	KERNEL_ASSERT(program != 0);
@@ -252,6 +252,8 @@ int64_t sched_process_start(struct load_program *program) {
 	proc->page_table = program->root;
 
 	// 5. permanently attach this thread to a user process
+	// and mark the thread as joinable.
+	current->flags |= SCHED_THREAD_FLAG_JOINABLE;
 	current->flags |= SCHED_THREAD_FLAG_PROCESS;
 
 	// 6. call assembly code to initialize the trapframe
