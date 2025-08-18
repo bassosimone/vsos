@@ -14,22 +14,22 @@
 
 void vm_map_kernel_memory(struct vm_root_pt root) {
 	printk("vm: <0x%llx> .text [%llx, %llx) => EXEC\n", root.table, __kernel_base, __kernel_end);
-	vm_map_range_identity(root, (uint64_t)__kernel_base, (uint64_t)__kernel_end, VM_MAP_FLAG_EXEC);
+	vm_map_range_identity(root, (page_addr_t)__kernel_base, (page_addr_t)__kernel_end, VM_MAP_FLAG_EXEC);
 
 	printk("vm: <0x%llx> .rodata [%llx, %llx) => 0\n", root.table, __rodata_base, __rodata_end);
-	vm_map_range_identity(root, (uint64_t)__rodata_base, (uint64_t)__rodata_end, 0);
+	vm_map_range_identity(root, (page_addr_t)__rodata_base, (page_addr_t)__rodata_end, 0);
 
 	printk("vm: <0x%llx> .data [%llx, %llx) => WRITE\n", root.table, __data_base, __data_end);
-	vm_map_range_identity(root, (uint64_t)__data_base, (uint64_t)__data_end, VM_MAP_FLAG_WRITE);
+	vm_map_range_identity(root, (page_addr_t)__data_base, (page_addr_t)__data_end, VM_MAP_FLAG_WRITE);
 
 	printk("vm: <0x%llx> .bss [%llx, %llx) => WRITE\n", root.table, __bss_base, __bss_end);
-	vm_map_range_identity(root, (uint64_t)__bss_base, (uint64_t)__bss_end, VM_MAP_FLAG_WRITE);
+	vm_map_range_identity(root, (page_addr_t)__bss_base, (page_addr_t)__bss_end, VM_MAP_FLAG_WRITE);
 
 	printk("vm: <0x%llx> .stack [%llx, %llx) => WRITE\n", root.table, __stack_bottom, __stack_top);
-	vm_map_range_identity(root, (uint64_t)__stack_bottom, (uint64_t)__stack_top, VM_MAP_FLAG_WRITE);
+	vm_map_range_identity(root, (page_addr_t)__stack_bottom, (page_addr_t)__stack_top, VM_MAP_FLAG_WRITE);
 
 	printk("vm: <0x%llx> __free_ram [%llx, %llx) => WRITE\n", root.table, __free_ram_start, __free_ram_end);
-	vm_map_range_identity(root, (uint64_t)__free_ram_start, (uint64_t)__free_ram_end, VM_MAP_FLAG_WRITE);
+	vm_map_range_identity(root, (page_addr_t)__free_ram_start, (page_addr_t)__free_ram_end, VM_MAP_FLAG_WRITE);
 }
 
 void vm_map_devices(struct vm_root_pt root) {
@@ -81,7 +81,7 @@ void vm_map_explicit(struct vm_root_pt root, page_addr_t paddr, uintptr_t vaddr,
 	__vm_map_explicit_assume_aligned(root, paddr, vaddr, flags);
 }
 
-void vm_map_range_identity(struct vm_root_pt root, page_addr_t start, uintptr_t end, __flags32_t flags) {
+void vm_map_range_identity(struct vm_root_pt root, page_addr_t start, page_addr_t end, __flags32_t flags) {
 	KERNEL_ASSERT(vm_align_down(start) == start);
 	end = vm_align_up(end);
 

@@ -68,7 +68,7 @@ struct vm_root_pt vm_kernel_root_pt(void);
 // The end_addr argument is automatically aligned up to the next page.
 //
 // We are using identity mapping so the addresses won't change.
-void vm_map_range_identity(struct vm_root_pt root, page_addr_t start, uintptr_t end, __flags32_t flags);
+void vm_map_range_identity(struct vm_root_pt root, page_addr_t start, page_addr_t end, __flags32_t flags);
 
 // Explicitly sets a VM mapping between paddr and vaddr using the root and flags.
 //

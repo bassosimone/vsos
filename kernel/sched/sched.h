@@ -7,7 +7,7 @@
 #include <kernel/exec/load.h> // for struct load_program
 
 #include <sys/param.h> // for HZ
-#include <sys/types.h> // for uint64_t
+#include <sys/types.h> // for __status_t
 
 // Interrupt service routine for the scheduler clock.
 //
@@ -216,26 +216,26 @@ void sched_thread_resume_all(sched_channels_t channels);
 // Safe to call whenever you can call sched_thread_suspend.
 //
 // Has a private-like name because usually you want to use higher-level APIs.
-void __sched_thread_sleep(uint64_t jiffies);
+void __sched_thread_sleep(__duration64_t jiffies);
 
 // Put the current thread to sleep for the given amount of nanoseconds.
 //
 // Safe to call whenever you can call sched_thread_suspend.
-static inline void sched_thread_nanosleep(uint64_t nanosec) {
+static inline void sched_thread_nanosleep(__duration64_t nanosec) {
 	return __sched_thread_sleep((nanosec * HZ) / (1000 * 1000 * 1000));
 }
 
 // Put the current thread to sleep for the given amount of milliseconds.
 //
 // Safe to call whenever you can call sched_thread_suspend.
-static inline void sched_thread_millisleep(uint64_t millisec) {
+static inline void sched_thread_millisleep(__duration64_t millisec) {
 	return __sched_thread_sleep((millisec * HZ) / 1000);
 }
 
 // Put the current thread to sleep for the given amount of seconds.
 //
 // Safe to call whenever you can call sched_thread_suspend.
-static inline void sched_thread_sleep(uint64_t sec) {
+static inline void sched_thread_sleep(__duration64_t sec) {
 	return __sched_thread_sleep(sec * HZ);
 }
 

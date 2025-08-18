@@ -68,4 +68,9 @@ typedef uint64_t __flags32_t;
 // __status_t: negative errno value on failure, zero on success.
 typedef int64_t __status_t;
 
+// __duration64_t: time duration using 64 bits precision.
+//
+// We use this type to represent time intervals.
+typedef uint64_t __duration64_t;
+
 #endif // __SYS_TYPES_H__

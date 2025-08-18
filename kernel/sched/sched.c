@@ -14,9 +14,11 @@
 #include <kernel/sched/switch.h>  // switching threads
 #include <kernel/trap/trap.h>     // for trap_restore_user_and_eret
 
-#include <string.h>    // for memset
 #include <sys/errno.h> // for EAGAIN
 #include <sys/param.h> // for SCHED_MAX_THREADS
+#include <sys/types.h> // for __duration64_t
+
+#include <string.h> // for memset
 
 // The scheduler is not using this thread slot.
 #define SCHED_THREAD_STATE_UNUSED 0
@@ -74,7 +76,7 @@ struct sched_thread {
 	sched_channels_t blockedby;
 
 	// The epoch when the thread was created.
-	uint64_t epoch;
+	__duration64_t epoch;
 
 	// Back pointer to the owning process.
 	//
@@ -120,7 +122,7 @@ static sched_channels_t events = 0;
 static uint64_t need_sched = 0;
 
 // Number of ticks since the system has booted.
-static volatile uint64_t jiffies = 0;
+static volatile __duration64_t jiffies = 0;
 
 void sched_clock_init_irqs(void) {
 	clock_tick_start();
@@ -137,7 +139,7 @@ static inline bool __sched_should_reschedule(void) {
 	return __atomic_exchange_n(&need_sched, 0, __ATOMIC_ACQUIRE) != 0;
 }
 
-static inline uint64_t __sched_jiffies(int memoryorder) {
+static inline __duration64_t __sched_jiffies(int memoryorder) {
 	return __atomic_load_n(&jiffies, memoryorder);
 }
 
@@ -430,7 +432,7 @@ __status_t sched_thread_join(int64_t tid, void **retvalptr) {
 	// OK, let's bite the spinlock
 	spinlock_acquire(&lock);
 
-	uint64_t oepoch = 0;
+	__duration64_t oepoch = 0;
 	for (;;) {
 
 		// Join algorithm handles several race conditions:
@@ -541,11 +543,11 @@ void sched_thread_resume_all(sched_channels_t channels) {
 	spinlock_release(&lock);
 }
 
-void __sched_thread_sleep(uint64_t jiffies) {
-	uint64_t start = __sched_jiffies(__ATOMIC_RELAXED);
+void __sched_thread_sleep(__duration64_t jiffies) {
+	__duration64_t start = __sched_jiffies(__ATOMIC_RELAXED);
 	for (;;) {
 		sched_thread_suspend(SCHED_THREAD_WAIT_TIMER);
-		uint64_t current = __sched_jiffies(__ATOMIC_RELAXED);
+		__duration64_t current = __sched_jiffies(__ATOMIC_RELAXED);
 		if (current - start >= jiffies) {
 			return;
 		}
