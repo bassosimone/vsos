@@ -30,10 +30,10 @@ void uart_isr(void) {
 	pl011_isr(&uart0);
 }
 
-ssize_t uart_send(const char *buf, size_t count, uint32_t flags) {
+ssize_t uart_send(const char *buf, size_t count, __flags32_t flags) {
 	return pl011_send(&uart0, buf, count, flags);
 }
 
-ssize_t uart_recv(char *buf, size_t count, uint32_t flags) {
+ssize_t uart_recv(char *buf, size_t count, __flags32_t flags) {
 	return pl011_recv(&uart0, buf, count, flags);
 }

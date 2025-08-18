@@ -43,7 +43,7 @@ typedef void(sched_thread_main_t)(void *opaque);
 // creates a thread that you must explicitly join.
 //
 // Returns a negative errno value or the thread ID (>= 0).
-int64_t sched_thread_start(sched_thread_main_t *main, void *opaque, uint64_t flags);
+int64_t sched_thread_start(sched_thread_main_t *main, void *opaque, __flags32_t flags);
 
 // Starts a kernel thread running a user process.
 //
@@ -184,13 +184,19 @@ void sched_thread_maybe_yield(void);
 // Do not use outside of this subsystem.
 #define __SCHED_THREAD_WAIT_THREAD (1 << 3)
 
+// Type representing channels on which a kernel thread may suspend.
+//
+// This type is 64-bit wide regardless of the word size so that, with the current
+// bitmask, approach, we can model at least 64 event sources.
+typedef uint64_t sched_channels_t;
+
 // This function suspends the current thread until one of the
 // given channels (e.g., SCHED_THREAD_WAIT_UART_READABLE) becomes
 // available. Channels are a bitmask of possible event sources.
 //
 // This function MUST be called whenever it would be safe to
 // call the sched_thread_maybe_yield function.
-void sched_thread_suspend(uint64_t channels);
+void sched_thread_suspend(sched_channels_t channels);
 
 // This function updates the bitmask of events occurred since
 // the last scheduler invocation. The next cooperative multitasking
@@ -203,7 +209,7 @@ void sched_thread_suspend(uint64_t channels);
 // thread should suspend itself again.
 //
 // This function is typically called from interrupt context.
-void sched_thread_resume_all(uint64_t channels);
+void sched_thread_resume_all(sched_channels_t channels);
 
 // Put the given thread to sleep for the given amount of jiffies.
 //

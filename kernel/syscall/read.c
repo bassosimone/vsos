@@ -27,7 +27,7 @@ ssize_t read(int fd, char *user_buf, size_t count) {
 	case 0:
 	case 1:
 	case 2:
-		rv = uart_recv(kernel_buf, count, /* flags*/ 0);
+		rv = uart_recv(kernel_buf, count, /* flags */ 0);
 		break;
 
 	default:

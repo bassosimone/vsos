@@ -190,7 +190,7 @@ void pl011_isr(struct pl011_device *dev) {
 	}
 }
 
-ssize_t pl011_recv(struct pl011_device *dev, char *buf, size_t count, uint32_t flags) {
+ssize_t pl011_recv(struct pl011_device *dev, char *buf, size_t count, __flags32_t flags) {
 	// Defend against return value overflow
 	count = (count <= SSIZE_MAX) ? count : SSIZE_MAX;
 
@@ -239,7 +239,7 @@ ssize_t pl011_recv(struct pl011_device *dev, char *buf, size_t count, uint32_t f
 	}
 }
 
-ssize_t pl011_send(struct pl011_device *dev, const char *buf, size_t count, uint32_t flags) {
+ssize_t pl011_send(struct pl011_device *dev, const char *buf, size_t count, __flags32_t flags) {
 	// Ensure we're not going to overflow the return value
 	count = (count <= SSIZE_MAX) ? count : SSIZE_MAX;
 

@@ -76,7 +76,7 @@ void pl011_isr(struct pl011_device *dev);
 // however threads running at IRQ level MUST use O_NONBLOCK.
 //
 // W/o O_NONBLOCK this function blocks until interrupts are enabled.
-ssize_t pl011_recv(struct pl011_device *dev, char *buf, size_t count, uint32_t flags);
+ssize_t pl011_recv(struct pl011_device *dev, char *buf, size_t count, __flags32_t flags);
 
 // Allows writing bytes to the PL011.
 //
@@ -91,6 +91,6 @@ ssize_t pl011_recv(struct pl011_device *dev, char *buf, size_t count, uint32_t f
 //
 // This function falls back to cooperative multitasking if
 // we have not enabled interrupts for the PL011 yet.
-ssize_t pl011_send(struct pl011_device *dev, const char *buf, size_t count, uint32_t flags);
+ssize_t pl011_send(struct pl011_device *dev, const char *buf, size_t count, __flags32_t flags);
 
 #endif // KERNEL_DRIVERS_PL011_ARM64_H

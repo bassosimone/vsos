@@ -47,9 +47,6 @@ struct vm_root_pt {
 	uintptr_t table;
 };
 
-// Flags passed to memory mapping functions.
-typedef uint64_t vm_map_flags_t;
-
 // Initialization function that switches from physical to virtual addressing.
 //
 // We are forced to use identity mapping since the linker script uses a fixed address.
@@ -71,13 +68,13 @@ struct vm_root_pt vm_kernel_root_pt(void);
 // The end_addr argument is automatically aligned up to the next page.
 //
 // We are using identity mapping so the addresses won't change.
-void vm_map_range_identity(struct vm_root_pt root, page_addr_t start, uintptr_t end, vm_map_flags_t flags);
+void vm_map_range_identity(struct vm_root_pt root, page_addr_t start, uintptr_t end, __flags32_t flags);
 
 // Explicitly sets a VM mapping between paddr and vaddr using the root and flags.
 //
 // This is the proper API to use when your objective is to map user pages or to remap
 // specific areas of the memory for kernel usage with different flags.
-void vm_map_explicit(struct vm_root_pt root, page_addr_t paddr, uintptr_t vaddr, vm_map_flags_t flags);
+void vm_map_explicit(struct vm_root_pt root, page_addr_t paddr, uintptr_t vaddr, __flags32_t flags);
 
 // Maps the kernel memory into the given root table.
 //
@@ -92,7 +89,7 @@ void vm_map_kernel_memory(struct vm_root_pt root);
 void vm_map_devices(struct vm_root_pt root);
 
 // Convenience wrapper for vm_map_explicit to setup identity mapping for paddr.
-static inline void vm_map_identity(struct vm_root_pt root, page_addr_t paddr, vm_map_flags_t flags) {
+static inline void vm_map_identity(struct vm_root_pt root, page_addr_t paddr, __flags32_t flags) {
 	return vm_map_explicit(root, paddr, paddr, flags);
 }
 
@@ -105,13 +102,13 @@ static inline void vm_map_identity(struct vm_root_pt root, page_addr_t paddr, vm
 // Panics if paddr is 0.
 //
 // Clears paddr to 0 in case of error.
-int64_t vm_user_virt_to_phys(uintptr_t *paddr, struct vm_root_pt root, uintptr_t vaddr, vm_map_flags_t flags);
+int64_t vm_user_virt_to_phys(uintptr_t *paddr, struct vm_root_pt root, uintptr_t vaddr, __flags32_t flags);
 
 // Internal machine dependent mapping implementation that assumes that
 // we have already checked that arguments are correctly aligned.
 //
 // Prefer __vm_map_explicit to calling this function.
-void __vm_map_explicit_assume_aligned(struct vm_root_pt root, page_addr_t paddr, uintptr_t vaddr, vm_map_flags_t flags);
+void __vm_map_explicit_assume_aligned(struct vm_root_pt root, page_addr_t paddr, uintptr_t vaddr, __flags32_t flags);
 
 // Internal machine-dependent function for using the MMU.
 //

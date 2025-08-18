@@ -65,13 +65,13 @@ struct sched_thread {
 	void *opaque;
 
 	// Flags modifying the thread behavior (see SCHED_THREAD_FLAG_xxx).
-	uint64_t flags;
+	__flags32_t flags;
 
 	// The raw trap frame pointer, which points inside the stack.
 	uintptr_t trapframe;
 
 	// The thing the thread is blocked by.
-	uint64_t blockedby;
+	sched_channels_t blockedby;
 
 	// The epoch when the thread was created.
 	uint64_t epoch;
@@ -114,7 +114,7 @@ static struct sched_thread *idle_thread = 0;
 static size_t fair_id = 0;
 
 // List of pending events since the last schedule occurred.
-static uint64_t events = 0;
+static sched_channels_t events = 0;
 
 // Flag indicating we should reschedule
 static uint64_t need_sched = 0;
@@ -158,7 +158,7 @@ static inline void __sched_thread_stack_init(struct sched_thread *thread) {
 }
 
 // Assumption: the caller has acquired the spinlock
-static int64_t __sched_thread_start_locked(sched_thread_main_t *main, void *opaque, uint64_t flags) {
+static int64_t __sched_thread_start_locked(sched_thread_main_t *main, void *opaque, __flags32_t flags) {
 	// 1. find thread that is currently unused
 	size_t idx = 0;
 	struct sched_thread *candidate = 0;
@@ -205,7 +205,7 @@ static int64_t __sched_thread_start_locked(sched_thread_main_t *main, void *opaq
 	return candidate->id;
 }
 
-int64_t sched_thread_start(sched_thread_main_t *main, void *opaque, uint64_t flags) {
+int64_t sched_thread_start(sched_thread_main_t *main, void *opaque, __flags32_t flags) {
 	// Ensure no-one can modify the thread global state while we're creating a thread
 	spinlock_acquire(&lock);
 	int64_t rv = __sched_thread_start_locked(main, opaque, flags);
@@ -326,7 +326,7 @@ static struct sched_thread *select_runnable(void) {
 	KERNEL_ASSERT(current != 0);
 
 	// 3. grab the list of events and clear it
-	uint64_t channels = events;
+	sched_channels_t channels = events;
 	events = 0;
 
 	// 4. Switch to a runnable thread using a ~fair round-robin scheduling.
@@ -528,14 +528,14 @@ void sched_thread_maybe_yield(void) {
 	}
 }
 
-void sched_thread_suspend(uint64_t channels) {
+void sched_thread_suspend(sched_channels_t channels) {
 	KERNEL_ASSERT(current != 0);
 	current->state = SCHED_THREAD_STATE_BLOCKED;
 	current->blockedby = channels;
 	sched_thread_yield();
 }
 
-void sched_thread_resume_all(uint64_t channels) {
+void sched_thread_resume_all(sched_channels_t channels) {
 	spinlock_acquire(&lock);
 	events |= channels;
 	spinlock_release(&lock);

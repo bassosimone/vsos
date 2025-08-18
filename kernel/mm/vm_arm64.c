@@ -48,7 +48,7 @@
 #define MAIR_ATTR_DEVICE_nGnRE 0x04
 
 // Creates a leaf page table entry.
-static uint64_t make_leaf_pte(uintptr_t paddr, vm_map_flags_t flags) {
+static uint64_t make_leaf_pte(uintptr_t paddr, __flags32_t flags) {
 	uint64_t pte = paddr & ARM64_PTE_ADDR_MASK;
 
 	// Valid leaf
@@ -116,15 +116,12 @@ static uint64_t make_intermediate_table_desc(uintptr_t paddr) {
 }
 
 // The caller MUST already have checked that the addresses are all aligned.
-void __vm_map_explicit_assume_aligned(struct vm_root_pt root,
-                                      page_addr_t paddr,
-                                      uintptr_t vaddr,
-                                      vm_map_flags_t flags) {
+void __vm_map_explicit_assume_aligned(struct vm_root_pt root, page_addr_t paddr, uintptr_t vaddr, __flags32_t flags) {
 	// 1. validate assumptions
 	KERNEL_ASSERT(PAGE_SIZE == 4096);
 
 	// 2. see whether we need to debug page allocations
-	uint64_t palloc_flags = PAGE_ALLOC_WAIT;
+	__flags32_t palloc_flags = PAGE_ALLOC_WAIT;
 	if ((flags & VM_MAP_FLAG_DEBUG) != 0) {
 		palloc_flags |= PAGE_ALLOC_DEBUG;
 	}
@@ -200,7 +197,7 @@ void __vm_map_explicit_assume_aligned(struct vm_root_pt root,
 	// support for TLB invalidation to this code.
 }
 
-int64_t vm_user_virt_to_phys(uintptr_t *paddr, struct vm_root_pt root, uintptr_t vaddr, vm_map_flags_t flags) {
+int64_t vm_user_virt_to_phys(uintptr_t *paddr, struct vm_root_pt root, uintptr_t vaddr, __flags32_t flags) {
 	// 0. let the user know what we're doing and clear paddr
 	if ((flags & VM_MAP_FLAG_DEBUG) != 0) {
 		printk("vm_find_page: <0x%llx> vaddr=0x%llx\n", root.table, vaddr);

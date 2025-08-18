@@ -52,10 +52,10 @@ void page_init_early(void);
 // Returns 0 on success and `-ENOMEM` or `-EAGAIN` on failure.
 //
 // The addr is set to zero in case of error.
-int64_t page_alloc(page_addr_t *addr, uint64_t flags);
+int64_t page_alloc(page_addr_t *addr, __flags32_t flags);
 
 // Convenience function for allocations that MUST always succeed.
-static inline page_addr_t page_must_alloc(uint64_t flags) {
+static inline page_addr_t page_must_alloc(__flags32_t flags) {
 	page_addr_t addr = 0;
 	KERNEL_ASSERT(page_alloc(&addr, flags) == 0);
 	return addr;
@@ -69,7 +69,7 @@ static inline page_addr_t page_must_alloc(uint64_t flags) {
 // The flags allow you to pass PAGE_ALLOC_DEBUG for debug printing.
 //
 // Panics when the address is not aligned or the page is not allocated.
-void page_free(page_addr_t addr, uint64_t flags);
+void page_free(page_addr_t addr, __flags32_t flags);
 
 // Prints the bitmask using printk.
 void page_debug_printk(void);

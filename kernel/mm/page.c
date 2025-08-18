@@ -107,7 +107,7 @@ void page_init_early(void) {
 }
 
 // Allocate a free page returning 0 and the page index on success, -ENOMEM on failure.
-static inline int64_t bitmask_alloc(size_t *index, uint64_t flags) {
+static inline int64_t bitmask_alloc(size_t *index, __flags32_t flags) {
 	KERNEL_ASSERT(index != 0);
 	*index = 0; // avoid possible UB
 
@@ -137,7 +137,7 @@ static inline int64_t bitmask_alloc(size_t *index, uint64_t flags) {
 }
 
 // Free an allocated page panicking if it was not allocated.
-static inline void bitmask_free(size_t index, uint64_t flags) {
+static inline void bitmask_free(size_t index, __flags32_t flags) {
 	KERNEL_ASSERT(index < MAX_PAGES);
 
 	size_t slot_idx = (index >> SLOT_SHIFT);
@@ -172,7 +172,7 @@ static inline page_addr_t make_page_addr(size_t index) {
 	return addr;
 }
 
-int64_t page_alloc(page_addr_t *addr, uint64_t flags) {
+int64_t page_alloc(page_addr_t *addr, __flags32_t flags) {
 	KERNEL_ASSERT(addr != 0);
 	*addr = 0; // Avoid possible UB
 
@@ -209,13 +209,10 @@ int64_t page_alloc(page_addr_t *addr, uint64_t flags) {
 	}
 }
 
-void page_free(page_addr_t addr, uint64_t flags) {
+void page_free(page_addr_t addr, __flags32_t flags) {
 	// Ensure the address is within RAM and aligned
 	if ((flags & PAGE_ALLOC_DEBUG) != 0) {
-		printk("page_free: %llx %llx %llx\n",
-		       (uintptr_t)__free_ram_start,
-		       addr,
-		       (uintptr_t)__free_ram_end);
+		printk("page_free: %llx %llx %llx\n", (uintptr_t)__free_ram_start, addr, (uintptr_t)__free_ram_end);
 	}
 	KERNEL_ASSERT(addr >= (uintptr_t)__free_ram_start);
 	KERNEL_ASSERT(addr < (uintptr_t)__free_ram_end);

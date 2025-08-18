@@ -40,7 +40,7 @@ void uart_isr(void);
 // however threads running at IRQ level MUST use O_NONBLOCK.
 //
 // This function blocks until interrupts are enabled.
-ssize_t uart_recv(char *buf, size_t count, uint32_t flags);
+ssize_t uart_recv(char *buf, size_t count, __flags32_t flags);
 
 // Allows writing bytes to the UART.
 //
@@ -55,6 +55,6 @@ ssize_t uart_recv(char *buf, size_t count, uint32_t flags);
 //
 // This function falls back to cooperative multitasking if
 // we have not enabled interrupts yet.
-ssize_t uart_send(const char *buf, size_t count, uint32_t flags);
+ssize_t uart_send(const char *buf, size_t count, __flags32_t flags);
 
 #endif // KERNEL_TTY_UART_H

@@ -16,7 +16,7 @@
 
 static inline int64_t mmap_segment(struct vm_root_pt uroot, struct elf64_image *image, struct elf64_segment *segment) {
 	// Transform flags to VM flags
-	vm_map_flags_t userflags = VM_MAP_FLAG_USER;
+	__flags32_t userflags = VM_MAP_FLAG_USER;
 	if ((segment->flags & ELF64_PF_R) != 0) {
 		// nothing: all pages are readable
 	}

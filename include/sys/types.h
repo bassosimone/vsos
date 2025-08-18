@@ -60,4 +60,9 @@ typedef int64_t intptr_t;
 #define SSIZE_MAX INT64_MAX
 #define INTPTR_MAX INT64_MAX
 
+// Nonportable integer types used in the kernel.
+
+// __flags32_t: integer that can hold at least 32 bit flags.
+typedef uint64_t __flags32_t;
+
 #endif // __SYS_TYPES_H__

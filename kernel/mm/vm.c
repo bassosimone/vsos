@@ -61,7 +61,7 @@ void vm_switch(void) {
 	printk("vm: we're now running in virtual address space\n");
 }
 
-void vm_map_explicit(struct vm_root_pt root, page_addr_t paddr, uintptr_t vaddr, vm_map_flags_t flags) {
+void vm_map_explicit(struct vm_root_pt root, page_addr_t paddr, uintptr_t vaddr, __flags32_t flags) {
 	// 1. make sure all the addresses are aligned with the page size
 	KERNEL_ASSERT(__builtin_is_aligned(root.table, PAGE_SIZE));
 	KERNEL_ASSERT(__builtin_is_aligned(paddr, PAGE_SIZE));
@@ -81,7 +81,7 @@ void vm_map_explicit(struct vm_root_pt root, page_addr_t paddr, uintptr_t vaddr,
 	__vm_map_explicit_assume_aligned(root, paddr, vaddr, flags);
 }
 
-void vm_map_range_identity(struct vm_root_pt root, page_addr_t start, uintptr_t end, vm_map_flags_t flags) {
+void vm_map_range_identity(struct vm_root_pt root, page_addr_t start, uintptr_t end, __flags32_t flags) {
 	KERNEL_ASSERT(vm_align_down(start) == start);
 	end = vm_align_up(end);
 

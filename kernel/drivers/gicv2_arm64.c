@@ -27,7 +27,7 @@ void gicv2_init_struct(struct gicv2_device *dev, uintptr_t gicc_base, uintptr_t 
 }
 
 void gicv2_init_mm(struct gicv2_device *dev, struct vm_root_pt root) {
-	vm_map_flags_t flags = VM_MAP_FLAG_WRITE | VM_MAP_FLAG_DEVICE;
+	__flags32_t flags = VM_MAP_FLAG_WRITE | VM_MAP_FLAG_DEVICE;
 
 	uintptr_t gicc_limit = gicc_memory_limit(dev->gicc_base);
 	printk("vm: <0x%llx> GICC_BASE<%s> [%llx, %llx) => DEVICE|WRITE\n",
