@@ -73,4 +73,7 @@ typedef int64_t __status_t;
 // We use this type to represent time intervals.
 typedef uint64_t __duration64_t;
 
+// __thread_id_t: kernel-internal unique thread ID.
+typedef uint64_t __thread_id_t;
+
 #endif // __SYS_TYPES_H__

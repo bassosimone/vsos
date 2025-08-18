@@ -42,8 +42,10 @@ typedef void(sched_thread_main_t)(void *opaque);
 // The zero flags create a detached thread. The SCHED_THREAD_FLAG_JOINABLE flag
 // creates a thread that you must explicitly join.
 //
-// Returns a negative errno value or the thread ID (>= 0).
-int64_t sched_thread_start(sched_thread_main_t *main, void *opaque, __flags32_t flags);
+// Returns a negative errno value on failure and zero on success.
+//
+// The *tid return argument must be nonnull and will contain the thread ID.
+__status_t sched_thread_start(__thread_id_t *tid, sched_thread_main_t *main, void *opaque, __flags32_t flags);
 
 // Force the current thread to return to userspace and execute the given program.
 //
@@ -97,7 +99,7 @@ void sched_thread_yield(void);
 // When the other thread has already terminated, this function may
 // potentially sleep awaiting for the notification depending on what
 // happens inside the scheduler and within the IRQs.
-__status_t sched_thread_join(int64_t tid, void **retvalptr);
+__status_t sched_thread_join(__thread_id_t tid, void **retvalptr);
 
 // Opaque representation of a kernel thread.
 struct sched_thread;

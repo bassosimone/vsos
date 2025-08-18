@@ -51,8 +51,10 @@ static void __kernel_init_thread(void *opaque) {
 	// 6. Create the kernel init thread.
 	//
 	// This will enable interrupts and finish bringing the kernel up and running
-	int64_t tid = sched_thread_start(__kernel_init_thread, /* opaque */ 0, /* flags */ 0);
-	printk("created __kernel_init_thread: %d\n", tid);
+	__thread_id_t ketid = 0;
+	__status_t rc = sched_thread_start(&ketid, __kernel_init_thread, /* opaque */ 0, /* flags */ 0);
+	KERNEL_ASSERT(rc == 0);
+	printk("created __kernel_init_thread: %d\n", ketid);
 
 	// 7. Run the thread scheduler.
 	//

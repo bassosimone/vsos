@@ -52,7 +52,7 @@ struct sched_thread {
 	alignas(16) uint8_t stack[SCHED_THREAD_STACK_SIZE];
 
 	// The thread ID.
-	uint64_t id;
+	__thread_id_t id;
 
 	// The thread state (one of SCHED_THREAD_STATE_xxx constants).
 	uint64_t state;
@@ -160,7 +160,12 @@ static inline void __sched_thread_stack_init(struct sched_thread *thread) {
 }
 
 // Assumption: the caller has acquired the spinlock
-static int64_t __sched_thread_start_locked(sched_thread_main_t *main, void *opaque, __flags32_t flags) {
+static __status_t
+__sched_thread_start_locked(__thread_id_t *tid, sched_thread_main_t *main, void *opaque, __flags32_t flags) {
+	// 0. always clear the tid
+	KERNEL_ASSERT(tid != 0);
+	*tid = 0;
+
 	// 1. find thread that is currently unused
 	size_t idx = 0;
 	struct sched_thread *candidate = 0;
@@ -204,15 +209,17 @@ static int64_t __sched_thread_start_locked(sched_thread_main_t *main, void *opaq
 	candidate->epoch = __sched_jiffies(__ATOMIC_RELAXED);
 
 	// 11. return the thread ID.
-	return candidate->id;
+	*tid = candidate->id;
+	return 0;
 }
 
-int64_t sched_thread_start(sched_thread_main_t *main, void *opaque, __flags32_t flags) {
+__status_t sched_thread_start(__thread_id_t *tid, sched_thread_main_t *main, void *opaque, __flags32_t flags) {
 	// Ensure no-one can modify the thread global state while we're creating a thread
+	KERNEL_ASSERT(tid != 0 && main != 0);
 	spinlock_acquire(&lock);
-	int64_t rv = __sched_thread_start_locked(main, opaque, flags);
+	__status_t rc = __sched_thread_start_locked(tid, main, opaque, flags);
 	spinlock_release(&lock);
-	return rv;
+	return rc;
 }
 
 // Panic if we cannot get the process associated with the current thread.
@@ -302,12 +309,14 @@ static void __unlock_and_switch_to(struct sched_thread *next) {
 
 [[noreturn]] void sched_thread_run(void) {
 	// Manually instantiate the idle thread
-	int64_t rv = sched_thread_start(__idle_main, /* opaque */ 0, /* flags */ 0);
-	printk("scheduler: created idle thread with ID: %lld\n", rv);
-	KERNEL_ASSERT(rv >= 0);
+	__thread_id_t ketid = 0;
+	__status_t rc = sched_thread_start(&ketid, __idle_main, /* opaque */ 0, /* flags */ 0);
+	printk("scheduler: created idle thread with ID: %lld\n", ketid);
+	KERNEL_ASSERT(rc == 0);
 
 	// Ensure the idle thread is accessible
-	idle_thread = &threads[rv];
+	KERNEL_ASSERT(ketid >= 0 && ketid < MAX_THREADS);
+	idle_thread = &threads[ketid];
 
 	// Manually set it as the currently running thread
 	printk("scheduler: setting the idle thread as the current thread\n");
@@ -423,7 +432,7 @@ void sched_thread_yield(void) {
 	panic("thread resumed execution after terminating");
 }
 
-__status_t sched_thread_join(int64_t tid, void **retvalptr) {
+__status_t sched_thread_join(__thread_id_t tid, void **retvalptr) {
 	KERNEL_ASSERT(current != 0);
 
 	// Just avoid wasting time with out of bound thread IDs
