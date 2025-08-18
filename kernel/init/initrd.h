@@ -13,6 +13,6 @@ struct initrd_info {
 };
 
 // Loads the initial ramdisk or returns a negative errno.
-int64_t initrd_load(struct initrd_info *info);
+__status_t initrd_load(struct initrd_info *info);
 
 #endif // KERNEL_INIT_INITRD_H

@@ -102,7 +102,7 @@ static inline void vm_map_identity(struct vm_root_pt root, page_addr_t paddr, __
 // Panics if paddr is 0.
 //
 // Clears paddr to 0 in case of error.
-int64_t vm_user_virt_to_phys(uintptr_t *paddr, struct vm_root_pt root, uintptr_t vaddr, __flags32_t flags);
+__status_t vm_user_virt_to_phys(uintptr_t *paddr, struct vm_root_pt root, uintptr_t vaddr, __flags32_t flags);
 
 // Internal machine dependent mapping implementation that assumes that
 // we have already checked that arguments are correctly aligned.

@@ -25,6 +25,6 @@ struct load_program {
 };
 
 // Loads a parsed ELF64 image into RAM.
-int64_t load_elf64(struct load_program *prog, struct elf64_image *image);
+__status_t load_elf64(struct load_program *prog, struct elf64_image *image);
 
 #endif // KERNEL_EXEC_LOAD_H

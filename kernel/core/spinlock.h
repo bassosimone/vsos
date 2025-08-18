@@ -31,7 +31,7 @@ static inline void spinlock_acquire(struct spinlock *lock) {
 // Attempt to acquire the spinlock.
 //
 // Return 0 on success and -EAGAIN on failure.
-static inline int64_t spinlock_try_acquire(struct spinlock *lock) {
+static inline __status_t spinlock_try_acquire(struct spinlock *lock) {
 	if (__atomic_test_and_set(&lock->value, __ATOMIC_ACQUIRE)) {
 		return -EAGAIN;
 	}

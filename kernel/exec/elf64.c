@@ -56,7 +56,7 @@ struct elf64_phdr {
 #define ELFCLASS64 2
 #define ELFDATA2LSB 1
 
-static int64_t __fill(struct elf64_image *image, const void *data, size_t size) {
+static __status_t __fill(struct elf64_image *image, const void *data, size_t size) {
 	// 1. convert to pointer and ensure we have enough space to touch it.
 	printk("elf64: parsing ELF4 at base=0x%llx size=%lld into 0x%llx\n", data, size, image);
 	struct elf64_ehdr *ehdr = (struct elf64_ehdr *)data;
@@ -227,8 +227,7 @@ static int64_t __fill(struct elf64_image *image, const void *data, size_t size) 
 		printk("      p_align: 0x%llx\n", entry->p_align);
 
 		// 15.9. ensure that the entry is actually good
-		if (image->entry >= segment->virt_addr &&
-		    image->entry < segment->virt_addr + segment->mem_size &&
+		if (image->entry >= segment->virt_addr && image->entry < segment->virt_addr + segment->mem_size &&
 		    (segment->flags & ELF64_PF_X) != 0) {
 			if (is_entry_good) {
 				return -ENOEXEC;
@@ -242,7 +241,7 @@ static int64_t __fill(struct elf64_image *image, const void *data, size_t size) 
 	return (is_entry_good) ? 0 : -ENOEXEC;
 }
 
-int64_t elf64_parse(struct elf64_image *image, const void *data, size_t size) {
+__status_t elf64_parse(struct elf64_image *image, const void *data, size_t size) {
 	// 1. basic sanity checks
 	if (image == 0 || data == 0 || size <= 0) {
 		return -EINVAL;

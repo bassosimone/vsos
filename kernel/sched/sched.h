@@ -99,7 +99,7 @@ void sched_thread_yield(void);
 // When the other thread has already terminated, this function may
 // potentially sleep awaiting for the notification depending on what
 // happens inside the scheduler and within the IRQs.
-int64_t sched_thread_join(int64_t tid, void **retvalptr);
+__status_t sched_thread_join(int64_t tid, void **retvalptr);
 
 // Opaque representation of a kernel thread.
 struct sched_thread;
@@ -111,7 +111,7 @@ struct sched_thread;
 // Panics if table is 0.
 //
 // On failure, initializes *table to a zero value.
-int64_t sched_current_process_page_table(struct vm_root_pt *table);
+__status_t sched_current_process_page_table(struct vm_root_pt *table);
 
 // Switch to the first runnable thread and never return.
 //

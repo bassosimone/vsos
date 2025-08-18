@@ -52,7 +52,7 @@ void page_init_early(void);
 // Returns 0 on success and `-ENOMEM` or `-EAGAIN` on failure.
 //
 // The addr is set to zero in case of error.
-int64_t page_alloc(page_addr_t *addr, __flags32_t flags);
+__status_t page_alloc(page_addr_t *addr, __flags32_t flags);
 
 // Convenience function for allocations that MUST always succeed.
 static inline page_addr_t page_must_alloc(__flags32_t flags) {

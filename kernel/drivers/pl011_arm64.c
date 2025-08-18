@@ -290,7 +290,7 @@ ssize_t pl011_send(struct pl011_device *dev, const char *buf, size_t count, __fl
 		// As a safety net, for now, also wait for the clock to tick
 		// such that we don't get a completely frozen console.
 		spinlock_release(&dev->__txlock);
-		uint64_t channels = SCHED_THREAD_WAIT_UART_WRITABLE | SCHED_THREAD_WAIT_TIMER;
+		sched_channels_t channels = SCHED_THREAD_WAIT_UART_WRITABLE | SCHED_THREAD_WAIT_TIMER;
 		sched_thread_suspend(channels);
 	}
 }

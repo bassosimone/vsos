@@ -19,7 +19,7 @@ ssize_t copy_from_user(char *dst, const char *src, size_t count) {
 
 	// Get the page table used by the current process
 	struct vm_root_pt table = {0};
-	int64_t rc = sched_current_process_page_table(&table);
+	__status_t rc = sched_current_process_page_table(&table);
 	if (rc != 0) {
 		return rc;
 	}

@@ -197,7 +197,7 @@ void __vm_map_explicit_assume_aligned(struct vm_root_pt root, page_addr_t paddr,
 	// support for TLB invalidation to this code.
 }
 
-int64_t vm_user_virt_to_phys(uintptr_t *paddr, struct vm_root_pt root, uintptr_t vaddr, __flags32_t flags) {
+__status_t vm_user_virt_to_phys(uintptr_t *paddr, struct vm_root_pt root, uintptr_t vaddr, __flags32_t flags) {
 	// 0. let the user know what we're doing and clear paddr
 	if ((flags & VM_MAP_FLAG_DEBUG) != 0) {
 		printk("vm_find_page: <0x%llx> vaddr=0x%llx\n", root.table, vaddr);

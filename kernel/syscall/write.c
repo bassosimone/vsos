@@ -32,6 +32,6 @@ ssize_t write(int fd, const char *user_buf, size_t count) {
 		return uart_send(kernel_buf, count, /* flags */ 0);
 
 	default:
-		return (uint64_t)-EBADF;
+		return -EBADF;
 	}
 }

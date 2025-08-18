@@ -219,7 +219,7 @@ static inline struct sched_process *must_get_process(struct sched_thread *thread
 	return thread->__proc;
 }
 
-int64_t sched_current_process_page_table(struct vm_root_pt *table) {
+__status_t sched_current_process_page_table(struct vm_root_pt *table) {
 	KERNEL_ASSERT(table != 0);
 	KERNEL_ASSERT(current != 0);
 	if (current->__proc == 0) {
@@ -419,7 +419,7 @@ void sched_thread_yield(void) {
 	panic("thread resumed execution after terminating");
 }
 
-int64_t sched_thread_join(int64_t tid, void **retvalptr) {
+__status_t sched_thread_join(int64_t tid, void **retvalptr) {
 	KERNEL_ASSERT(current != 0);
 
 	// Just avoid wasting time with out of bound thread IDs

@@ -65,4 +65,7 @@ typedef int64_t intptr_t;
 // __flags32_t: integer that can hold at least 32 bit flags.
 typedef uint64_t __flags32_t;
 
+// __status_t: negative errno value on failure, zero on success.
+typedef int64_t __status_t;
+
 #endif // __SYS_TYPES_H__

@@ -107,7 +107,7 @@ void page_init_early(void) {
 }
 
 // Allocate a free page returning 0 and the page index on success, -ENOMEM on failure.
-static inline int64_t bitmask_alloc(size_t *index, __flags32_t flags) {
+static inline __status_t bitmask_alloc(size_t *index, __flags32_t flags) {
 	KERNEL_ASSERT(index != 0);
 	*index = 0; // avoid possible UB
 
@@ -172,7 +172,7 @@ static inline page_addr_t make_page_addr(size_t index) {
 	return addr;
 }
 
-int64_t page_alloc(page_addr_t *addr, __flags32_t flags) {
+__status_t page_alloc(page_addr_t *addr, __flags32_t flags) {
 	KERNEL_ASSERT(addr != 0);
 	*addr = 0; // Avoid possible UB
 
@@ -187,7 +187,7 @@ int64_t page_alloc(page_addr_t *addr, __flags32_t flags) {
 		}
 
 		size_t index = 0;
-		int64_t rc = bitmask_alloc(&index, flags);
+		__status_t rc = bitmask_alloc(&index, flags);
 		spinlock_release(&lock);
 
 		if (rc < 0) {

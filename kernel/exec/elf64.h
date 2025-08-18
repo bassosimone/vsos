@@ -63,6 +63,6 @@ struct elf64_image {
 // Fills image with a simplified view of the ELF64 binary at [data, data+size).
 //
 // Returns 0 on success and a negative errno value on failure.
-int64_t elf64_parse(struct elf64_image *image, const void *data, size_t size);
+__status_t elf64_parse(struct elf64_image *image, const void *data, size_t size);
 
 #endif // KERNEL_EXEC_ELF64_H

@@ -17,7 +17,7 @@ static inline size_t __initrd_size(void) {
 	return (uintptr_t)__shell_end - (uintptr_t)__shell_start;
 }
 
-int64_t initrd_load(struct initrd_info *info) {
+__status_t initrd_load(struct initrd_info *info) {
 	KERNEL_ASSERT(info != 0);
 	info->base = __initrd_data();
 	info->count = __initrd_size();

@@ -10,11 +10,12 @@
 #include <kernel/mm/vm.h>       // for vm_root_pt
 
 #include <sys/errno.h> // for ENOEXEC
-#include <sys/types.h> // for int64_t
+#include <sys/types.h> // for __status_t
 
 #include <string.h> // for __bzero_unaligned
 
-static inline int64_t mmap_segment(struct vm_root_pt uroot, struct elf64_image *image, struct elf64_segment *segment) {
+static inline __status_t
+mmap_segment(struct vm_root_pt uroot, struct elf64_image *image, struct elf64_segment *segment) {
 	// Transform flags to VM flags
 	__flags32_t userflags = VM_MAP_FLAG_USER;
 	if ((segment->flags & ELF64_PF_R) != 0) {
@@ -55,7 +56,7 @@ static inline int64_t mmap_segment(struct vm_root_pt uroot, struct elf64_image *
 	for (size_t copy_offset = 0, idx = 0; idx < num_pages; idx++) {
 		// Allocate a single physical page using the allocator
 		page_addr_t ppaddr = 0;
-		int64_t rc = page_alloc(&ppaddr, PAGE_ALLOC_WAIT | PAGE_ALLOC_YIELD);
+		__status_t rc = page_alloc(&ppaddr, PAGE_ALLOC_WAIT | PAGE_ALLOC_YIELD);
 		if (rc != 0) {
 			return rc;
 		}
@@ -92,7 +93,7 @@ static inline int64_t mmap_segment(struct vm_root_pt uroot, struct elf64_image *
 	return 0;
 }
 
-static int64_t allocate_stack(struct load_program *prog) {
+static __status_t allocate_stack(struct load_program *prog) {
 	// Make sure our assumptions hold
 	KERNEL_ASSERT(page_aligned(LAYOUT_USER_STACK_BOTTOM));
 	KERNEL_ASSERT(page_aligned(LAYOUT_USER_STACK_TOP));
@@ -109,7 +110,7 @@ static int64_t allocate_stack(struct load_program *prog) {
 	for (size_t idx = 0; idx < num_pages; idx++) {
 		// Allocate a single physical page using the allocator
 		page_addr_t ppaddr = 0;
-		int64_t rc = page_alloc(&ppaddr, PAGE_ALLOC_WAIT | PAGE_ALLOC_YIELD);
+		__status_t rc = page_alloc(&ppaddr, PAGE_ALLOC_WAIT | PAGE_ALLOC_YIELD);
 		if (rc != 0) {
 			return rc;
 		}
@@ -125,7 +126,7 @@ static int64_t allocate_stack(struct load_program *prog) {
 	return 0;
 }
 
-int64_t load_elf64(struct load_program *prog, struct elf64_image *image) {
+__status_t load_elf64(struct load_program *prog, struct elf64_image *image) {
 	// 1. ensure we're not passed null pointers
 	KERNEL_ASSERT(prog != 0);
 	KERNEL_ASSERT(image != 0);
@@ -154,7 +155,7 @@ int64_t load_elf64(struct load_program *prog, struct elf64_image *image) {
 			continue;
 		}
 		printk("  loading segment %lld\n", idx);
-		int64_t rc = mmap_segment(prog->root, image, segment);
+		__status_t rc = mmap_segment(prog->root, image, segment);
 		if (rc != 0) {
 			return rc;
 		}
