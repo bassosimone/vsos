@@ -45,7 +45,7 @@ build shell.elf: user_ld $
     libc/unistd/write.o $
     shell/shell.o
 
-build kernel/boot/boot_arm64.o: kernel_cc kernel/boot/boot_arm64.c
+build kernel/boot/boot_arm64.o: kernel_asm kernel/boot/boot_arm64.S
 build kernel/boot/boot.o: kernel_cc kernel/boot/boot.c
 
 build kernel/clock/clock_arm64.o: kernel_cc kernel/clock/clock_arm64.c
