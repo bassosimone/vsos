@@ -7,7 +7,7 @@ rule kernel_cc
   description = CC KERNEL $out
 
 rule kernel_asm
-  command = clang -I. -Iinclude -O2 -std=c23 -target aarch64-none-elf -ffreestanding -nostdlib -Wall -Wextra -c $in -o $out
+  command = clang -DARCH_ARM64 -I. -Iinclude -O2 -target aarch64-none-elf -ffreestanding -nostdlib -c $in -o $out
   description = CC ASM KERNEL $out
 
 rule kernel_ld
@@ -75,9 +75,9 @@ build kernel/syscall/read.o: kernel_cc kernel/syscall/read.c
 build kernel/syscall/syscall.o: kernel_cc kernel/syscall/syscall.c
 build kernel/syscall/write.o: kernel_cc kernel/syscall/write.c
 
-build kernel/trap/handle_arm64.o: kernel_cc kernel/trap/handle_arm64.S
+build kernel/trap/handle_arm64.o: kernel_asm kernel/trap/handle_arm64.S
 build kernel/trap/trap_arm64.o: kernel_cc kernel/trap/trap_arm64.c
-build kernel/trap/vector_arm64.o: kernel_cc kernel/trap/vector_arm64.S
+build kernel/trap/vector_arm64.o: kernel_asm kernel/trap/vector_arm64.S
 
 build kernel/tty/uart_arm64.o: kernel_cc kernel/tty/uart_arm64.c
 
