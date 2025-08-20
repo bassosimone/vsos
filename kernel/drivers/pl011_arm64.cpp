@@ -3,13 +3,13 @@
 // SPDX-License-Identifier: MIT
 // Adapted from: https://github.com/nuta/operating-system-in-1000-lines
 
-#include <kernel/asm/asm.h>             // for mmio_write_uint32
-#include <kernel/core/printk.h>         // for printk
-#include <kernel/core/ringbuf.h>        // for struct ringbuf
-#include <kernel/core/spinlock.h>       // for struct spinlock
-#include <kernel/drivers/pl011_arm64.h> // for struct pl011_device
-#include <kernel/mm/vm.h>               // for vm_root_pt
-#include <kernel/sched/sched.h>         // for sched_thread_suspend
+#include <kernel/asm/asm.h>               // for mmio_write_uint32
+#include <kernel/core/printk.h>           // for printk
+#include <kernel/core/ringbuf.hpp>        // for struct ringbuf
+#include <kernel/core/spinlock.h>         // for struct spinlock
+#include <kernel/drivers/pl011_arm64.hpp> // for struct pl011_device
+#include <kernel/mm/vm.h>                 // for vm_root_pt
+#include <kernel/sched/sched.h>           // for sched_thread_suspend
 
 #include <sys/errno.h> // for EAGAIN
 #include <sys/fcntl.h> // for O_NONBLOCK
@@ -17,27 +17,27 @@
 #include <string.h> // for __bzero_unaligned
 
 // Returns the limit of the MMIO range given a specific base.
-static inline uintptr_t memory_limit(uintptr_t base) {
+static inline uintptr_t memory_limit(uintptr_t base) noexcept {
 	return base + 0x1000ULL;
 }
 
 // DR: data register.
-static inline volatile uint32_t *dr_addr(uintptr_t base) {
+static inline volatile uint32_t *dr_addr(uintptr_t base) noexcept {
 	return (volatile uint32_t *)(base + 0x00);
 }
 
 // CR: enable UART, TX and RX.
-static inline volatile uint32_t *cr_addr(uintptr_t base) {
+static inline volatile uint32_t *cr_addr(uintptr_t base) noexcept {
 	return (volatile uint32_t *)(base + 0x30);
 }
 
 // IMSC: interrupt mask set/clear register.
-static inline volatile uint32_t *imsc_addr(uintptr_t base) {
+static inline volatile uint32_t *imsc_addr(uintptr_t base) noexcept {
 	return (volatile uint32_t *)(base + 0x38);
 }
 
 // ICR: interrupt clear (i.e., acknowledge) register.
-static inline volatile uint32_t *icr_addr(uintptr_t base) {
+static inline volatile uint32_t *icr_addr(uintptr_t base) noexcept {
 	return (volatile uint32_t *)(base + 0x44);
 }
 
@@ -53,13 +53,13 @@ static inline volatile uint32_t *icr_addr(uintptr_t base) {
 // Bitmask used to clear all possible interrupt sources.
 #define UARTICR_CLR_ALL 0x7FF
 
-void pl011_init_struct(struct pl011_device *dev, uintptr_t base, const char *device_name) {
+void pl011_init_struct(struct pl011_device *dev, uintptr_t base, const char *device_name) noexcept {
 	__bzero_unaligned(dev, sizeof(*dev));
 	dev->base = base;
 	dev->name = device_name;
 }
 
-void pl011_init_early(struct pl011_device *dev) {
+void pl011_init_early(struct pl011_device *dev) noexcept {
 	// Disable UART and "push" changes
 	mmio_write_uint32(cr_addr(dev->base), 0);
 
@@ -76,7 +76,7 @@ void pl011_init_early(struct pl011_device *dev) {
 	printk("%s: UARTCR |= UARTEN | RXE | TXE\n", dev->name);
 }
 
-void pl011_init_mm(struct pl011_device *dev, struct vm_root_pt root) {
+void pl011_init_mm(struct pl011_device *dev, struct vm_root_pt root) noexcept {
 	uintptr_t limit = memory_limit(dev->base);
 	printk("vm: <0x%llx> PL011<%s> [%llx, %llx) => DEVICE|WRITE\n", root.table, dev->name, dev->base, limit);
 	vm_map_range_identity(root, dev->base, limit, VM_MAP_FLAG_WRITE | VM_MAP_FLAG_DEVICE);
@@ -95,24 +95,24 @@ void pl011_init_mm(struct pl011_device *dev, struct vm_root_pt root) {
 #define UARTINT_OE (1u << 10) /* Overrun */
 
 // UARTCLR_H: line control register high part.
-static inline volatile uint32_t *clr_h_addr(uintptr_t base) {
+static inline volatile uint32_t *clr_h_addr(uintptr_t base) noexcept {
 	return (volatile uint32_t *)(base + 0x2C);
 }
 
 // UARTIFLS: interrupt FIFO level select register.
-static inline volatile uint32_t *ifls_addr(uintptr_t base) {
+static inline volatile uint32_t *ifls_addr(uintptr_t base) noexcept {
 	return (volatile uint32_t *)(base + 0x34);
 }
 
-static inline void set_has_interrupts(struct pl011_device *dev) {
+static inline void set_has_interrupts(struct pl011_device *dev) noexcept {
 	__atomic_store_n(&dev->__has_interrupts, 1, __ATOMIC_RELEASE);
 }
 
-static inline bool has_enabled_interrupts(struct pl011_device *dev) {
+static inline bool has_enabled_interrupts(struct pl011_device *dev) noexcept {
 	return __atomic_load_n(&dev->__has_interrupts, __ATOMIC_ACQUIRE) != 0;
 }
 
-void pl011_init_irqs(struct pl011_device *dev) {
+void pl011_init_irqs(struct pl011_device *dev) noexcept {
 	// Enable the FIFO behavior
 	mmio_write_uint32(clr_h_addr(dev->base), (mmio_read_uint32(clr_h_addr(dev->base)) | UARTLCR_H_FEN));
 
@@ -133,7 +133,7 @@ void pl011_init_irqs(struct pl011_device *dev) {
 }
 
 // UARTFR: flags register.
-static inline volatile uint32_t *fr_addr(uintptr_t base) {
+static inline volatile uint32_t *fr_addr(uintptr_t base) noexcept {
 	return (volatile uint32_t *)(base + 0x18);
 }
 
@@ -144,21 +144,21 @@ static inline volatile uint32_t *fr_addr(uintptr_t base) {
 #define UARTFR_RXFE (1 << 4)
 
 // Return whether the UART is readable.
-static inline bool is_readable(uintptr_t base) {
+static inline bool is_readable(uintptr_t base) noexcept {
 	return (mmio_read_uint32(fr_addr(base)) & UARTFR_RXFE) == 0;
 }
 
 // Return whether the UART is writable.
-static inline bool is_writable(uintptr_t base) {
+static inline bool is_writable(uintptr_t base) noexcept {
 	return (mmio_read_uint32(fr_addr(base)) & UARTFR_TXFF) == 0;
 }
 
 // UARTMIS: masked interrupt status register.
-static inline volatile uint32_t *mis_addr(uintptr_t base) {
+static inline volatile uint32_t *mis_addr(uintptr_t base) noexcept {
 	return (volatile uint32_t *)(base + 0x40);
 }
 
-void pl011_isr(struct pl011_device *dev) {
+void pl011_isr(struct pl011_device *dev) noexcept {
 	uint32_t mis = mmio_read_uint32(mis_addr(dev->base));
 
 	// Handle the case of the UART being readable
@@ -190,7 +190,7 @@ void pl011_isr(struct pl011_device *dev) {
 	}
 }
 
-ssize_t pl011_recv(struct pl011_device *dev, char *buf, size_t count, __flags32_t flags) {
+ssize_t pl011_recv(struct pl011_device *dev, char *buf, size_t count, __flags32_t flags) noexcept {
 	// Defend against return value overflow
 	count = (count <= SSIZE_MAX) ? count : SSIZE_MAX;
 
@@ -239,7 +239,7 @@ ssize_t pl011_recv(struct pl011_device *dev, char *buf, size_t count, __flags32_
 	}
 }
 
-ssize_t pl011_send(struct pl011_device *dev, const char *buf, size_t count, __flags32_t flags) {
+ssize_t pl011_send(struct pl011_device *dev, const char *buf, size_t count, __flags32_t flags) noexcept {
 	// Ensure we're not going to overflow the return value
 	count = (count <= SSIZE_MAX) ? count : SSIZE_MAX;
 

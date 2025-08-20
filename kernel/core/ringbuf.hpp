@@ -1,26 +1,17 @@
-// File: kernel/core/ringbuf.h
-// Purpose: simple ring buffer definition
+// File: kernel/core/ringbuf.hpp
+// Purpose: Single-produce single-consumer ring buffer definition.
 // SPDX-License-Identifier: MIT
-#ifndef KERNEL_CORE_RINGBUF_H
-#define KERNEL_CORE_RINGBUF_H
+#ifndef KERNEL_CORE_RINGBUF_HPP
+#define KERNEL_CORE_RINGBUF_HPP
 
-#include <sys/types.h>
-
-// Size of a ringbuf buffer.
-#define RINGBUF_SIZE 256
-
-// Mask for obtaining head and tail.
-#define RINGBUF_MASK (RINGBUF_SIZE - 1)
-
-// Ensure the size is a power of two.
-static_assert(__builtin_popcount(RINGBUF_SIZE) == 1);
+#include <sys/types.h> // for size_t
 
 // Single-producer single-consumer lockless ring buffer.
 //
 // A zero-initialized ringbuf is ready to use.
-struct ringbuf {
+template <typename Type, size_t Size> struct ringbuf {
 	// The actual buffer.
-	uint16_t buf[RINGBUF_SIZE];
+	Type buf[Size];
 
 	// Pointer to the buffer head updated by the producer.
 	size_t head;
@@ -29,8 +20,11 @@ struct ringbuf {
 	size_t tail;
 };
 
-// Push a value into the ring buffer.
-static inline bool ringbuf_push(struct ringbuf *rb, uint16_t c) {
+// Push a specific value into the ring buffer.
+template <typename Type, size_t Size> bool ringbuf_push(ringbuf<Type, Size> *rb, Type c) {
+	// Ensure the size is reasonable.
+	_Static_assert(Size > 0 && __builtin_popcount(Size) == 1);
+
 	// Since we own the head we can be more relaxed.
 	size_t head = __atomic_load_n(&rb->head, __ATOMIC_RELAXED);
 
@@ -38,19 +32,22 @@ static inline bool ringbuf_push(struct ringbuf *rb, uint16_t c) {
 	size_t tail = __atomic_load_n(&rb->tail, __ATOMIC_ACQUIRE);
 
 	// If the buffer is full, reject the newest.
-	if (head - tail >= RINGBUF_SIZE) {
+	if (head - tail >= Size) {
 		return false;
 	}
 
 	// Append to the buffer.
-	rb->buf[head & RINGBUF_MASK] = c;
+	rb->buf[head & (Size - 1)] = c;
 
 	// Synchronize with the producer acquiring the head.
 	__atomic_store_n(&rb->head, head + 1, __ATOMIC_RELEASE);
 	return true;
 }
 
-static inline bool ringbuf_pop(struct ringbuf *rb, uint16_t *c) {
+template <typename Type, size_t Size> bool ringbuf_pop(ringbuf<Type, Size> *rb, Type *c) {
+	// Ensure the size is reasonable.
+	_Static_assert(Size > 0 && __builtin_popcount(Size) == 1);
+
 	// Since we own the tail we can be more relaxed.
 	size_t tail = __atomic_load_n(&rb->tail, __ATOMIC_RELAXED);
 
@@ -63,11 +60,11 @@ static inline bool ringbuf_pop(struct ringbuf *rb, uint16_t *c) {
 	}
 
 	// Read the next character from the ring buffer.
-	*c = rb->buf[tail & RINGBUF_MASK];
+	*c = rb->buf[tail & (Size - 1)];
 
 	// Synchronize with the consumer acquiring the tail.
 	__atomic_store_n(&rb->tail, tail + 1, __ATOMIC_RELEASE);
 	return true;
 }
 
-#endif // KERNEL_CORE_RINGBUF_H
+#endif // KERNEL_CORE_RINGBUF_HPP

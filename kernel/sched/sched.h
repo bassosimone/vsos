@@ -6,8 +6,11 @@
 
 #include <kernel/exec/load.h> // for struct load_program
 
+#include <sys/cdefs.h> // for __BEGIN_DECLS
 #include <sys/param.h> // for HZ
 #include <sys/types.h> // for __status_t
+
+__BEGIN_DECLS
 
 // Interrupt service routine for the scheduler clock.
 //
@@ -15,14 +18,14 @@
 //
 // Will must acknowledge the IRQ, re-arm the timer, and
 // perform all the related scheduler bookkeping.
-void sched_clock_isr(void);
+void sched_clock_isr(void) __NOEXCEPT;
 
 // Initialize the timer to interrupt every HZ.
 //
 // Called by the IRQ subsystem.
 //
 // Do not use outside of this subsystem.
-void sched_clock_init_irqs(void);
+void sched_clock_init_irqs(void) __NOEXCEPT;
 
 // The thread can be joined and must not be automatically reaped.
 #define SCHED_THREAD_FLAG_JOINABLE (1 << 0)
@@ -45,7 +48,7 @@ typedef void(sched_thread_main_t)(void *opaque);
 // Returns a negative errno value on failure and zero on success.
 //
 // The *tid return argument must be nonnull and will contain the thread ID.
-__status_t sched_thread_start(__thread_id_t *tid, sched_thread_main_t *main, void *opaque, __flags32_t flags);
+__status_t sched_thread_start(__thread_id_t *tid, sched_thread_main_t *main, void *opaque, __flags32_t flags) __NOEXCEPT;
 
 // Force the current thread to return to userspace and execute the given program.
 //
@@ -63,7 +66,7 @@ __status_t sched_thread_start(__thread_id_t *tid, sched_thread_main_t *main, voi
 //
 // Additionally, the thread is marked as joinable since processes are joinable
 // by default, including init, for which we should panic if it returns.
-[[noreturn]] void sched_process_exec(struct load_program *program);
+[[noreturn]] void sched_process_exec(struct load_program *program) __NOEXCEPT;
 
 // Yields the CPU to another runnable thread.
 //
@@ -73,7 +76,7 @@ __status_t sched_thread_start(__thread_id_t *tid, sched_thread_main_t *main, voi
 // Returns when this thread becomes runnable again.
 //
 // If the thread exits, this function will never return.
-void sched_thread_yield(void);
+void sched_thread_yield(void) __NOEXCEPT;
 
 // Terminates the thread execution and sets the return value.
 //
@@ -82,7 +85,7 @@ void sched_thread_yield(void);
 //
 // This function never returns, rather it is a cooperative
 // scheduling point that schedules a new thread.
-[[noreturn]] void sched_thread_exit(void *retval);
+[[noreturn]] void sched_thread_exit(void *retval) __NOEXCEPT;
 
 // Waits for the given thread to terminate.
 //
@@ -99,7 +102,7 @@ void sched_thread_yield(void);
 // When the other thread has already terminated, this function may
 // potentially sleep awaiting for the notification depending on what
 // happens inside the scheduler and within the IRQs.
-__status_t sched_thread_join(__thread_id_t tid, void **retvalptr);
+__status_t sched_thread_join(__thread_id_t tid, void **retvalptr) __NOEXCEPT;
 
 // Opaque representation of a kernel thread.
 struct sched_thread;
@@ -111,7 +114,7 @@ struct sched_thread;
 // Panics if table is 0.
 //
 // On failure, initializes *table to a zero value.
-__status_t sched_current_process_page_table(struct vm_root_pt *table);
+__status_t sched_current_process_page_table(struct vm_root_pt *table) __NOEXCEPT;
 
 // Switch to the first runnable thread and never return.
 //
@@ -120,7 +123,7 @@ __status_t sched_current_process_page_table(struct vm_root_pt *table);
 // Called by the late boot process.
 //
 // Make sure this function is called just once.
-[[noreturn]] void sched_thread_run(void);
+[[noreturn]] void sched_thread_run(void) __NOEXCEPT;
 
 // Return to userspace possibly switching to another process.
 //
@@ -134,7 +137,7 @@ __status_t sched_current_process_page_table(struct vm_root_pt *table);
 // trapframe, loads the trapframe of a thread previously
 // suspended by returning to userspace, and issues a return
 // from userspace from such a context.
-[[noreturn]] void sched_return_to_user(uintptr_t raw_frame);
+[[noreturn]] void sched_return_to_user(uintptr_t raw_frame) __NOEXCEPT;
 
 // Call this function from kernel threads to ensure that the scheduler
 // has a chance to schedule another process when needed.
@@ -166,7 +169,7 @@ __status_t sched_current_process_page_table(struct vm_root_pt *table);
 //
 // Functions that call this function should document themselves
 // as cooperative synchronization points.
-void sched_thread_maybe_yield(void);
+void sched_thread_maybe_yield(void) __NOEXCEPT;
 
 // The thread is waiting for the UART to become readable.
 #define SCHED_THREAD_WAIT_UART_READABLE (1 << 0)
@@ -196,7 +199,7 @@ typedef uint64_t sched_channels_t;
 //
 // This function MUST be called whenever it would be safe to
 // call the sched_thread_maybe_yield function.
-void sched_thread_suspend(sched_channels_t channels);
+void sched_thread_suspend(sched_channels_t channels) __NOEXCEPT;
 
 // This function updates the bitmask of events occurred since
 // the last scheduler invocation. The next cooperative multitasking
@@ -209,34 +212,36 @@ void sched_thread_suspend(sched_channels_t channels);
 // thread should suspend itself again.
 //
 // This function is typically called from interrupt context.
-void sched_thread_resume_all(sched_channels_t channels);
+void sched_thread_resume_all(sched_channels_t channels) __NOEXCEPT;
 
 // Put the given thread to sleep for the given amount of jiffies.
 //
 // Safe to call whenever you can call sched_thread_suspend.
 //
 // Has a private-like name because usually you want to use higher-level APIs.
-void __sched_thread_sleep(__duration64_t jiffies);
+void __sched_thread_sleep(__duration64_t jiffies) __NOEXCEPT;
 
 // Put the current thread to sleep for the given amount of nanoseconds.
 //
 // Safe to call whenever you can call sched_thread_suspend.
-static inline void sched_thread_nanosleep(__duration64_t nanosec) {
+static inline void sched_thread_nanosleep(__duration64_t nanosec) __NOEXCEPT {
 	return __sched_thread_sleep((nanosec * HZ) / (1000 * 1000 * 1000));
 }
 
 // Put the current thread to sleep for the given amount of milliseconds.
 //
 // Safe to call whenever you can call sched_thread_suspend.
-static inline void sched_thread_millisleep(__duration64_t millisec) {
+static inline void sched_thread_millisleep(__duration64_t millisec) __NOEXCEPT {
 	return __sched_thread_sleep((millisec * HZ) / 1000);
 }
 
 // Put the current thread to sleep for the given amount of seconds.
 //
 // Safe to call whenever you can call sched_thread_suspend.
-static inline void sched_thread_sleep(__duration64_t sec) {
+static inline void sched_thread_sleep(__duration64_t sec) __NOEXCEPT {
 	return __sched_thread_sleep(sec * HZ);
 }
+
+__END_DECLS
 
 #endif // KERNEL_SCHED_SCHED_H

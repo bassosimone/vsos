@@ -6,6 +6,10 @@ rule kernel_cc
   command = clang -DARCH_ARM64 -I. -Iinclude -O2 -std=c23 -target aarch64-none-elf -ffreestanding -nostdlib -Wall -Wextra -c $in -o $out
   description = CC KERNEL $out
 
+rule kernel_cxx
+  command = clang++ -DARCH_ARM64 -I. -Iinclude -O2 -std=c++23 -target aarch64-none-elf -ffreestanding -nostdlib -nostdlib++ -fno-rtti -fno-exceptions -Wall -Wextra -c $in -o $out
+  description = CXX KERNEL $out
+
 rule kernel_asm
   command = clang -DARCH_ARM64 -I. -Iinclude -O2 -target aarch64-none-elf -ffreestanding -nostdlib -c $in -o $out
   description = CC ASM KERNEL $out
@@ -54,7 +58,7 @@ build kernel/core/panic.o: kernel_cc kernel/core/panic.c
 build kernel/core/printk.o: kernel_cc kernel/core/printk.c
 
 build kernel/drivers/gicv2_arm64.o: kernel_cc kernel/drivers/gicv2_arm64.c
-build kernel/drivers/pl011_arm64.o: kernel_cc kernel/drivers/pl011_arm64.c
+build kernel/drivers/pl011_arm64.o: kernel_cxx kernel/drivers/pl011_arm64.cpp
 
 build kernel/exec/elf64.o: kernel_cc kernel/exec/elf64.c
 build kernel/exec/load.o: kernel_cc kernel/exec/load.c
@@ -79,7 +83,7 @@ build kernel/trap/handle_arm64.o: kernel_asm kernel/trap/handle_arm64.S
 build kernel/trap/trap_arm64.o: kernel_cc kernel/trap/trap_arm64.c
 build kernel/trap/vector_arm64.o: kernel_asm kernel/trap/vector_arm64.S
 
-build kernel/tty/uart_arm64.o: kernel_cc kernel/tty/uart_arm64.c
+build kernel/tty/uart_arm64.o: kernel_cxx kernel/tty/uart_arm64.cpp
 
 build libc/string/memcmp_kernel.o: kernel_cc libc/string/memcmp.c
 build libc/string/memcpy_kernel.o: kernel_cc libc/string/memcpy.c

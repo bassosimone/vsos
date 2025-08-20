@@ -1,9 +1,13 @@
 -DARCH_ARM64
 -ffreestanding
 -nostdinc
+-nostdinc++
+-fno-rtti
+-fno-exceptions
 -I.
 -Iinclude
--std=c23
+-xc++
+-std=c++23
 -Wall
 -Wextra
 -Wmissing-prototypes

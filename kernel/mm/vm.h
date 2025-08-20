@@ -6,6 +6,7 @@
 
 #include <kernel/mm/page.h> // for page_addr_t
 
+#include <sys/cdefs.h> // for __BEGIN_DECLS
 #include <sys/param.h> // for PAGE_SIZE
 #include <sys/types.h> // for uintptr_t
 
@@ -31,13 +32,15 @@
 // Ensure that the page is a power of two.
 static_assert(__builtin_popcount(PAGE_SIZE) == 1);
 
+__BEGIN_DECLS
+
 // Align a value to the value of the page below the value itself.
-static inline uintptr_t vm_align_down(uintptr_t value) {
+static inline uintptr_t vm_align_down(uintptr_t value) __NOEXCEPT {
 	return value & ~PAGE_OFFSET_MASK;
 }
 
 // Align a value to the value of the page above the value itself.
-static inline uintptr_t vm_align_up(uintptr_t value) {
+static inline uintptr_t vm_align_up(uintptr_t value) __NOEXCEPT {
 	KERNEL_ASSERT(value <= UINTPTR_MAX - PAGE_OFFSET_MASK);
 	return (value + PAGE_OFFSET_MASK) & ~PAGE_OFFSET_MASK;
 }
@@ -54,10 +57,10 @@ struct vm_root_pt {
 // Address won't change after this function, but the MMU will be online.
 //
 // Called by boot code when the time is ripe.
-void vm_switch(void);
+void vm_switch(void) __NOEXCEPT;
 
 // Accessor function that returns the kernel root PT.
-struct vm_root_pt vm_kernel_root_pt(void);
+struct vm_root_pt vm_kernel_root_pt(void) __NOEXCEPT;
 
 // Maps a memory [start, end) memory range using the given flags.
 //
@@ -68,13 +71,13 @@ struct vm_root_pt vm_kernel_root_pt(void);
 // The end_addr argument is automatically aligned up to the next page.
 //
 // We are using identity mapping so the addresses won't change.
-void vm_map_range_identity(struct vm_root_pt root, page_addr_t start, page_addr_t end, __flags32_t flags);
+void vm_map_range_identity(struct vm_root_pt root, page_addr_t start, page_addr_t end, __flags32_t flags) __NOEXCEPT;
 
 // Explicitly sets a VM mapping between paddr and vaddr using the root and flags.
 //
 // This is the proper API to use when your objective is to map user pages or to remap
 // specific areas of the memory for kernel usage with different flags.
-void vm_map_explicit(struct vm_root_pt root, page_addr_t paddr, uintptr_t vaddr, __flags32_t flags);
+void vm_map_explicit(struct vm_root_pt root, page_addr_t paddr, uintptr_t vaddr, __flags32_t flags) __NOEXCEPT;
 
 // Maps the kernel memory into the given root table.
 //
@@ -83,13 +86,13 @@ void vm_map_explicit(struct vm_root_pt root, page_addr_t paddr, uintptr_t vaddr,
 //
 // So, the process basically gets a copy of the kernel layout and the
 // kernel layout is immutable after the boot.
-void vm_map_kernel_memory(struct vm_root_pt root);
+void vm_map_kernel_memory(struct vm_root_pt root) __NOEXCEPT;
 
 // Like vm_map_kernel_memory but for mapping devices memory.
-void vm_map_devices(struct vm_root_pt root);
+void vm_map_devices(struct vm_root_pt root) __NOEXCEPT;
 
 // Convenience wrapper for vm_map_explicit to setup identity mapping for paddr.
-static inline void vm_map_identity(struct vm_root_pt root, page_addr_t paddr, __flags32_t flags) {
+static inline void vm_map_identity(struct vm_root_pt root, page_addr_t paddr, __flags32_t flags) __NOEXCEPT {
 	return vm_map_explicit(root, paddr, paddr, flags);
 }
 
@@ -102,18 +105,18 @@ static inline void vm_map_identity(struct vm_root_pt root, page_addr_t paddr, __
 // Panics if paddr is 0.
 //
 // Clears paddr to 0 in case of error.
-__status_t vm_user_virt_to_phys(uintptr_t *paddr, struct vm_root_pt root, uintptr_t vaddr, __flags32_t flags);
+__status_t vm_user_virt_to_phys(uintptr_t *paddr, struct vm_root_pt root, uintptr_t vaddr, __flags32_t flags) __NOEXCEPT;
 
 // Internal machine dependent mapping implementation that assumes that
 // we have already checked that arguments are correctly aligned.
 //
 // Prefer __vm_map_explicit to calling this function.
-void __vm_map_explicit_assume_aligned(struct vm_root_pt root, page_addr_t paddr, uintptr_t vaddr, __flags32_t flags);
+void __vm_map_explicit_assume_aligned(struct vm_root_pt root, page_addr_t paddr, uintptr_t vaddr, __flags32_t flags) __NOEXCEPT;
 
 // Internal machine-dependent function for using the MMU.
 //
 // Should only be called within this subsystem.
-void __vm_switch(struct vm_root_pt pt);
+void __vm_switch(struct vm_root_pt pt) __NOEXCEPT;
 
 // This variable contains the kernel root page table.
 //
@@ -121,5 +124,7 @@ void __vm_switch(struct vm_root_pt pt);
 //
 // In assembly, well, you know what to do.
 extern uintptr_t __vm_kernel_root_pt;
+
+__END_DECLS
 
 #endif // KERNEL_MM_VM_H

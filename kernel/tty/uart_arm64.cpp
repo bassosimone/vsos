@@ -2,9 +2,9 @@
 // Purpose: UART driver for ARM64 devices.
 // SPDX-License-Identifier: MIT
 
-#include <kernel/drivers/pl011_arm64.h> // for struct pl011_device
-#include <kernel/mm/vm.h>               // for struct vm_root_pt
-#include <kernel/tty/uart.h>            // for uart_init_early
+#include <kernel/drivers/pl011_arm64.hpp> // for struct pl011_device
+#include <kernel/mm/vm.h>                 // for struct vm_root_pt
+#include <kernel/tty/uart.h>              // for uart_init_early
 
 #include <sys/types.h> // for size_t
 
@@ -13,27 +13,27 @@
 
 static struct pl011_device uart0;
 
-void uart_init_early(void) {
+void uart_init_early(void) noexcept {
 	pl011_init_struct(&uart0, PL011_MMIO_BASE, "uart0");
 	pl011_init_early(&uart0);
 }
 
-void uart_init_mm(struct vm_root_pt root) {
+void uart_init_mm(struct vm_root_pt root) noexcept {
 	pl011_init_mm(&uart0, root);
 }
 
-void uart_init_irqs(void) {
+void uart_init_irqs(void) noexcept {
 	pl011_init_irqs(&uart0);
 }
 
-void uart_isr(void) {
+void uart_isr(void) noexcept {
 	pl011_isr(&uart0);
 }
 
-ssize_t uart_send(const char *buf, size_t count, __flags32_t flags) {
+ssize_t uart_send(const char *buf, size_t count, __flags32_t flags) noexcept {
 	return pl011_send(&uart0, buf, count, flags);
 }
 
-ssize_t uart_recv(char *buf, size_t count, __flags32_t flags) {
+ssize_t uart_recv(char *buf, size_t count, __flags32_t flags) noexcept {
 	return pl011_recv(&uart0, buf, count, flags);
 }

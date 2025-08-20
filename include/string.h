@@ -20,7 +20,7 @@ int strncmp(const char *left, const char *right, size_t count) __NOEXCEPT;
 // Nonstandard function that zeroes memory that is not aligned without
 // causing data aborts caused by SIMD instructions.
 static inline void __bzero_unaligned(volatile void *data, size_t count) __NOEXCEPT {
-	volatile unsigned char *base = data;
+	volatile unsigned char *base = (volatile unsigned char *)data;
 	for (size_t idx = 0; idx < count; idx++) {
 		base[idx] = 0;
 	}
